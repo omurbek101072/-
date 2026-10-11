@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import {
   SubscriberAccount,
   MachineryItem,
@@ -8,24 +8,75 @@ import {
   TariffConfig,
   SiteSettings,
   PastureZone,
-  INITIAL_SUBSCRIBERS,
   MACHINERY_CATALOG,
-  INITIAL_MACHINERY_ORDERS,
-  INITIAL_CITIZEN_TICKETS,
-  INITIAL_TRANSACTIONS,
   INITIAL_TARIFFS,
   INITIAL_SITE_SETTINGS,
   PASTURE_ZONES
 } from '../data/mockData';
-import {
-  hashPin,
-  verifyPin,
-  isHashed,
-  DEFAULT_ADMIN_PIN_HASH,
-  MIN_PIN_LENGTH,
-  MAX_LOGIN_ATTEMPTS,
-  LOCKOUT_MS
-} from '../utils/security';
+import { db, auth, getSession, ApiError } from '../lib/supabase';
+
+// ---------- Базадагы абонент ↔ сайттагы абонент ----------
+interface SubscriberRow {
+  id: string;
+  full_name: string;
+  address: string;
+  phone: string;
+  water_balance: number;
+  water_last_meter_reading: number;
+  water_tariff_per_m3: number;
+  waste_balance: number;
+  waste_family_members: number;
+  waste_tariff_per_person: number;
+  pasture_balance: number;
+  livestock: SubscriberAccount['registeredLivestock'];
+}
+
+const fromRow = (r: SubscriberRow): SubscriberAccount => ({
+  id: r.id,
+  fullName: r.full_name,
+  address: r.address,
+  phone: r.phone,
+  waterBalance: Number(r.water_balance),
+  waterLastMeterReading: Number(r.water_last_meter_reading),
+  waterTariffPerM3: Number(r.water_tariff_per_m3),
+  wasteBalance: Number(r.waste_balance),
+  wasteFamilyMembers: Number(r.waste_family_members),
+  wasteTariffPerPerson: Number(r.waste_tariff_per_person),
+  pastureBalance: Number(r.pasture_balance),
+  registeredLivestock: r.livestock || { cattle: 0, horses: 0, sheepGoats: 0, yaks: 0 }
+});
+
+const toRow = (s: SubscriberAccount): SubscriberRow => ({
+  id: s.id,
+  full_name: s.fullName,
+  address: s.address,
+  phone: s.phone,
+  water_balance: Number(s.waterBalance) || 0,
+  water_last_meter_reading: Number(s.waterLastMeterReading) || 0,
+  water_tariff_per_m3: Number(s.waterTariffPerM3) || 0,
+  waste_balance: Number(s.wasteBalance) || 0,
+  waste_family_members: Number(s.wasteFamilyMembers) || 0,
+  waste_tariff_per_person: Number(s.wasteTariffPerPerson) || 0,
+  pasture_balance: Number(s.pastureBalance) || 0,
+  livestock: s.registeredLivestock
+});
+
+const enc = encodeURIComponent;
+
+export interface MeterResult {
+  prev: number;
+  new: number;
+  consumed: number;
+  amount: number;
+}
+
+export type TicketInput = Pick<CitizenTicket, 'category' | 'name' | 'phone' | 'address' | 'description'> & {
+  photo?: string;
+};
+
+export type OrderInput = Omit<MachineryOrder, 'id' | 'status' | 'paymentStatus' | 'createdAt' | 'machineName'> & {
+  machineName?: string;
+};
 
 interface AppContextType {
   subscribers: SubscriberAccount[];
@@ -37,10 +88,23 @@ interface AppContextType {
   siteSettings: SiteSettings;
   pastureZones: PastureZone[];
   isAdminLoggedIn: boolean;
+  adminEmail: string | null;
   isEditModeActive: boolean;
-  
-  // Actions
+  isLoading: boolean;
+  connectionError: string | null;
+  errorNotice: string | null;
+  clearErrorNotice: () => void;
+
   setIsEditModeActive: (active: boolean) => void;
+
+  // Эл үчүн (сервердеги функциялар аркылуу)
+  createTicket: (input: TicketInput) => Promise<string>;
+  getTicketStatus: (id: string) => Promise<CitizenTicket | null>;
+  createMachineryOrder: (input: OrderInput) => Promise<string>;
+  lookupSubscriber: (id: string) => Promise<SubscriberAccount | null>;
+  submitMeterReading: (accountId: string, reading: number, phone: string) => Promise<MeterResult>;
+
+  // Админ үчүн
   addPayment: (payment: PaymentTransaction) => void;
   addMachineryOrder: (order: MachineryOrder) => void;
   updateMachineryOrder: (orderId: string, updates: Partial<MachineryOrder>) => void;
@@ -52,207 +116,237 @@ interface AppContextType {
   updateTariffs: (newTariffs: TariffConfig) => void;
   updateSiteSettings: (updates: Partial<SiteSettings>) => void;
   updatePastureZone: (zoneId: string, updates: Partial<PastureZone>) => void;
-  submitMeterReading: (accountId: string, newReading: number, amount: number) => boolean;
-  loginAdmin: (pin: string) => Promise<{ ok: boolean; error?: string }>;
-  changeAdminPin: (currentPin: string, newPin: string) => Promise<{ ok: boolean; error?: string }>;
-  isDefaultAdminPin: boolean;
+  loginAdmin: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  changeAdminPassword: (newPassword: string) => Promise<{ ok: boolean; error?: string }>;
   logoutAdmin: () => void;
+  refreshData: () => Promise<void>;
   resetToDefaults: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY_PREFIX = 'tazalyk_portal_';
-
-// localStorage'дагы маалымат бузулуп калса, сайт ак экран болуп калбашы үчүн
-function loadSaved<T>(key: string, fallback: T): T {
-  try {
-    const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY_PREFIX}${key}`);
-    return saved ? (JSON.parse(saved) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function saveSafe(key: string, value: unknown) {
-  try {
-    localStorage.setItem(`${LOCAL_STORAGE_KEY_PREFIX}${key}`, JSON.stringify(value));
-  } catch {
-    // Сактагыч толуп калса же жабык болсо - сайт иштей берет
-  }
-}
-
-const ADMIN_SESSION_KEY = `${LOCAL_STORAGE_KEY_PREFIX}admin_session`;
+const errText = (e: unknown) => (e instanceof Error ? e.message : 'Белгисиз ката');
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Subscribers
-  const [subscribers, setSubscribers] = useState<SubscriberAccount[]>(() => loadSaved('subscribers', INITIAL_SUBSCRIBERS));
+  // Ачык маалымат: сервер жооп бергиче баштапкы тексттер көрсөтүлөт
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>(INITIAL_SITE_SETTINGS);
+  const [tariffs, setTariffs] = useState<TariffConfig>(INITIAL_TARIFFS);
+  const [machineryCatalog, setMachineryCatalog] = useState<MachineryItem[]>(MACHINERY_CATALOG);
+  const [pastureZones, setPastureZones] = useState<PastureZone[]>(PASTURE_ZONES);
+  const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
 
-  // Machinery
-  const [machineryCatalog, setMachineryCatalog] = useState<MachineryItem[]>(() =>
-    // Эски версияда сакталган сүрөт жолдорун (/src/assets/images/) жаңысына оңдоо
-    loadSaved('machinery', MACHINERY_CATALOG).map(m => ({
-      ...m,
-      image: m.image?.replace('/src/assets/images/', '/images/') ?? m.image
-    }))
-  );
+  // Админге гана жүктөлүүчү жеке маалымат
+  const [subscribers, setSubscribers] = useState<SubscriberAccount[]>([]);
+  const [machineryOrders, setMachineryOrders] = useState<MachineryOrder[]>([]);
+  const [citizenTickets, setCitizenTickets] = useState<CitizenTicket[]>([]);
 
-  // Machinery Orders
-  const [machineryOrders, setMachineryOrders] = useState<MachineryOrder[]>(() => loadSaved('orders', INITIAL_MACHINERY_ORDERS));
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [adminEmail, setAdminEmail] = useState<string | null>(null);
+  const [isEditModeActive, setIsEditModeActive] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [errorNotice, setErrorNotice] = useState<string | null>(null);
 
-  // Citizen Tickets
-  const [citizenTickets, setCitizenTickets] = useState<CitizenTicket[]>(() => loadSaved('tickets', INITIAL_CITIZEN_TICKETS));
+  // Админдин өзгөртүүсү серверге сакталбай калса — экранга чыгарабыз
+  const report = useCallback((e: unknown) => {
+    console.error(e);
+    setErrorNotice(`Сакталган жок: ${errText(e)}`);
+  }, []);
 
-  // Payment Transactions
-  const [transactions, setTransactions] = useState<PaymentTransaction[]>(() => loadSaved('transactions', INITIAL_TRANSACTIONS));
+  const loadPublic = useCallback(async () => {
+    const [config, machines, zones, recent] = await Promise.all([
+      db.select<{ key: string; value: any }>('site_config'),
+      db.select<{ id: string; data: MachineryItem }>('machinery', 'select=id,data&order=sort.asc'),
+      db.select<{ id: string; data: PastureZone }>('pasture_zones', 'select=id,data&order=sort.asc'),
+      db.rpc<PaymentTransaction[]>('recent_transactions')
+    ]);
+    const s = config.find(c => c.key === 'site_settings');
+    const t = config.find(c => c.key === 'tariffs');
+    if (s) setSiteSettings({ ...INITIAL_SITE_SETTINGS, ...s.value });
+    if (t) setTariffs({ ...INITIAL_TARIFFS, ...t.value });
+    if (machines.length) setMachineryCatalog(machines.map(m => m.data));
+    if (zones.length) setPastureZones(zones.map(z => z.data));
+    setTransactions(recent || []);
+  }, []);
 
-  // Tariffs
-  const [tariffs, setTariffs] = useState<TariffConfig>(() => {
-    const parsed = loadSaved<Partial<TariffConfig> | null>('tariffs', null);
-    if (parsed) {
-      try {
-        return {
-          ...INITIAL_TARIFFS,
-          ...parsed,
-          waterPerM3: Number(parsed.waterPerM3) || INITIAL_TARIFFS.waterPerM3,
-          waterWithoutMeterPerPerson: Number(parsed.waterWithoutMeterPerPerson) || INITIAL_TARIFFS.waterWithoutMeterPerPerson,
-          waterCommercialPerM3: Number(parsed.waterCommercialPerM3) || INITIAL_TARIFFS.waterCommercialPerM3,
-          waterIrrigationPerSotka: Number(parsed.waterIrrigationPerSotka) || INITIAL_TARIFFS.waterIrrigationPerSotka,
-          wastePerPerson: Number(parsed.wastePerPerson) || INITIAL_TARIFFS.wastePerPerson,
-          wasteCommercialPerM3: Number(parsed.wasteCommercialPerM3) || INITIAL_TARIFFS.wasteCommercialPerM3,
-        };
-      } catch {
-        return INITIAL_TARIFFS;
+  const loadAdmin = useCallback(async () => {
+    const [subs, orders, tickets, txs] = await Promise.all([
+      db.select<SubscriberRow>('subscribers', 'select=*&order=id.asc'),
+      db.select<{ data: MachineryOrder }>('machinery_orders', 'select=data&order=created_at.desc'),
+      db.select<{ data: CitizenTicket }>('citizen_tickets', 'select=data&order=created_at.desc'),
+      db.select<{ data: PaymentTransaction }>('transactions', 'select=data&order=created_at.desc&limit=500')
+    ]);
+    setSubscribers(subs.map(fromRow));
+    setMachineryOrders(orders.map(o => o.data));
+    setCitizenTickets(tickets.map(t => t.data));
+    setTransactions(txs.map(t => t.data));
+  }, []);
+
+  const clearAdminData = () => {
+    setSubscribers([]);
+    setMachineryOrders([]);
+    setCitizenTickets([]);
+  };
+
+  // Сессия бар болсо — админ экенин сервер аркылуу текшеребиз
+  const checkAdmin = useCallback(async (): Promise<boolean> => {
+    const s = getSession();
+    if (!s) return false;
+    const ok = await db.rpc<boolean>('is_admin');
+    if (ok) {
+      setIsAdminLoggedIn(true);
+      setAdminEmail(s.email);
+      await loadAdmin();
+    }
+    return !!ok;
+  }, [loadAdmin]);
+
+  const refreshData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      await loadPublic();
+      if (getSession()) {
+        const ok = await checkAdmin();
+        if (!ok) {
+          await auth.signOut();
+          setIsAdminLoggedIn(false);
+        }
       }
+      setConnectionError(null);
+    } catch (e) {
+      setConnectionError(errText(e));
+    } finally {
+      setIsLoading(false);
     }
-    return INITIAL_TARIFFS;
-  });
+  }, [loadPublic, checkAdmin]);
 
-  // Site Settings (All titles and text)
-  const [siteSettings, setSiteSettings] = useState<SiteSettings>(() => {
-    const parsed = loadSaved<Partial<SiteSettings> | null>('site_settings', null);
-    const merged = parsed ? { ...INITIAL_SITE_SETTINGS, ...parsed } : INITIAL_SITE_SETTINGS;
-    if (!merged.adminPin) merged.adminPin = INITIAL_SITE_SETTINGS.adminPin;
-    return merged;
-  });
-
-  // Pasture Zones
-  const [pastureZones, setPastureZones] = useState<PastureZone[]>(() => loadSaved('pasture_zones', PASTURE_ZONES));
-
-  // Админ сессиясы sessionStorage'да: браузер/өтмөк жабылганда автоматтык түрдө чыгат
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(() => {
+  useEffect(() => {
+    // Мурунку версия маалыматты браузерде сактачу — аны тазалайбыз
     try {
-      // Эски версиядагы "түбөлүк" сессияны өчүрүү
-      localStorage.removeItem(`${LOCAL_STORAGE_KEY_PREFIX}admin_logged_in`);
-      return sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  // Туура эмес сырсөз көп терилсе, убактылуу бөгөттөө
-  const [failedAttempts, setFailedAttempts] = useState(0);
-  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
-
-  // Direct In-Place Edit Mode (only available when admin is logged in)
-  const [isEditModeActive, setIsEditModeActive] = useState<boolean>(false);
-
-  // Save to localStorage
-  useEffect(() => {
-    saveSafe('subscribers', subscribers);
-  }, [subscribers]);
-
-  useEffect(() => {
-    saveSafe('machinery', machineryCatalog);
-  }, [machineryCatalog]);
-
-  useEffect(() => {
-    saveSafe('orders', machineryOrders);
-  }, [machineryOrders]);
-
-  useEffect(() => {
-    saveSafe('tickets', citizenTickets);
-  }, [citizenTickets]);
-
-  useEffect(() => {
-    saveSafe('transactions', transactions);
-  }, [transactions]);
-
-  useEffect(() => {
-    saveSafe('tariffs', tariffs);
-  }, [tariffs]);
-
-  useEffect(() => {
-    saveSafe('site_settings', siteSettings);
-  }, [siteSettings]);
-
-  useEffect(() => {
-    saveSafe('pasture_zones', pastureZones);
-  }, [pastureZones]);
-
-  useEffect(() => {
-    try {
-      if (isAdminLoggedIn) sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
-      else sessionStorage.removeItem(ADMIN_SESSION_KEY);
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('tazalyk_portal_'))
+        .forEach(k => localStorage.removeItem(k));
     } catch {
       // ignore
     }
-  }, [isAdminLoggedIn]);
+    refreshData();
+  }, [refreshData]);
 
-  // Эски версиядан калган ачык сырсөздү хэшке айландыруу
-  useEffect(() => {
-    if (siteSettings.adminPin && !isHashed(siteSettings.adminPin)) {
-      hashPin(siteSettings.adminPin).then(h => {
-        setSiteSettings(prev => ({ ...prev, adminPin: h }));
-      });
-    }
-  }, [siteSettings.adminPin]);
+  // ================= Эл үчүн аракеттер =================
 
-  // Actions
+  const createTicket = async (input: TicketInput): Promise<string> => {
+    const id = await db.rpc<string>('create_ticket', {
+      p_category: input.category,
+      p_name: input.name,
+      p_phone: input.phone,
+      p_address: input.address,
+      p_description: input.description,
+      p_photo: input.photo ?? null
+    });
+    if (isAdminLoggedIn) loadAdmin().catch(() => undefined);
+    return id;
+  };
+
+  const getTicketStatus = async (id: string): Promise<CitizenTicket | null> => {
+    const r = await db.rpc<CitizenTicket | null>('get_ticket_status', { p_id: id });
+    return r || null;
+  };
+
+  const createMachineryOrder = async (input: OrderInput): Promise<string> => {
+    const id = await db.rpc<string>('create_machinery_order', { p_order: input });
+    if (isAdminLoggedIn) loadAdmin().catch(() => undefined);
+    return id;
+  };
+
+  const lookupSubscriber = async (id: string): Promise<SubscriberAccount | null> => {
+    const r = await db.rpc<SubscriberAccount | null>('lookup_subscriber', { p_id: id });
+    if (!r) return null;
+    return {
+      ...r,
+      waterBalance: Number(r.waterBalance),
+      waterLastMeterReading: Number(r.waterLastMeterReading),
+      waterTariffPerM3: Number(r.waterTariffPerM3),
+      wasteBalance: Number(r.wasteBalance),
+      wasteFamilyMembers: Number(r.wasteFamilyMembers),
+      wasteTariffPerPerson: Number(r.wasteTariffPerPerson),
+      pastureBalance: Number(r.pastureBalance)
+    };
+  };
+
+  const submitMeterReading = async (accountId: string, reading: number, phone: string): Promise<MeterResult> => {
+    const r = await db.rpc<MeterResult>('submit_meter_reading', {
+      p_account: accountId,
+      p_reading: reading,
+      p_phone: phone
+    });
+    if (isAdminLoggedIn) loadAdmin().catch(() => undefined);
+    return r;
+  };
+
+  // ================= Админ аракеттери =================
+  // Экранда дароо жаңыртабыз, анан серверге сактайбыз. Ката болсо — билдирүү чыгат
+  // жана маалымат серверден кайра жүктөлөт.
+
+  const persist = (p: Promise<unknown>) => {
+    p.catch(e => {
+      report(e);
+      refreshData();
+    });
+  };
+
   const addPayment = (payment: PaymentTransaction) => {
     setTransactions(prev => [payment, ...prev]);
-
-    // Also update subscriber balance if valid account ID
     setSubscribers(prev => prev.map(sub => {
-      if (sub.id === payment.accountId) {
-        if (payment.serviceType === 'water') {
-          return { ...sub, waterBalance: sub.waterBalance + payment.amount };
-        } else if (payment.serviceType === 'waste') {
-          return { ...sub, wasteBalance: sub.wasteBalance + payment.amount };
-        } else if (payment.serviceType === 'pasture') {
-          return { ...sub, pastureBalance: sub.pastureBalance + payment.amount };
-        }
-      }
+      if (sub.id !== payment.accountId) return sub;
+      if (payment.serviceType === 'water') return { ...sub, waterBalance: sub.waterBalance + payment.amount };
+      if (payment.serviceType === 'waste') return { ...sub, wasteBalance: sub.wasteBalance + payment.amount };
+      if (payment.serviceType === 'pasture') return { ...sub, pastureBalance: sub.pastureBalance + payment.amount };
       return sub;
     }));
+    persist(db.rpc('admin_add_payment', { p_tx: payment }));
   };
 
   const addMachineryOrder = (order: MachineryOrder) => {
     setMachineryOrders(prev => [order, ...prev]);
+    persist(db.insert('machinery_orders', { id: order.id, phone: order.customerPhone.replace(/\D/g, ''), data: order }));
   };
 
   const updateMachineryOrder = (orderId: string, updates: Partial<MachineryOrder>) => {
-    setMachineryOrders(prev => prev.map(ord => ord.id === orderId ? { ...ord, ...updates } : ord));
+    const current = machineryOrders.find(o => o.id === orderId);
+    if (!current) return;
+    const merged = { ...current, ...updates };
+    setMachineryOrders(prev => prev.map(o => (o.id === orderId ? merged : o)));
+    persist(db.update('machinery_orders', `id=eq.${enc(orderId)}`, { data: merged }));
   };
 
   const addCitizenTicket = (ticket: CitizenTicket) => {
     setCitizenTickets(prev => [ticket, ...prev]);
+    persist(db.insert('citizen_tickets', { id: ticket.id, phone: ticket.phone.replace(/\D/g, ''), data: ticket }));
   };
 
   const updateCitizenTicket = (ticketId: string, updates: Partial<CitizenTicket>) => {
-    setCitizenTickets(prev => prev.map(tick => tick.id === ticketId ? { ...tick, ...updates } : tick));
+    const current = citizenTickets.find(t => t.id === ticketId);
+    if (!current) return;
+    const merged = { ...current, ...updates };
+    setCitizenTickets(prev => prev.map(t => (t.id === ticketId ? merged : t)));
+    persist(db.update('citizen_tickets', `id=eq.${enc(ticketId)}`, { data: merged }));
   };
 
   const updateSubscriber = (updated: SubscriberAccount) => {
-    setSubscribers(prev => prev.map(sub => sub.id === updated.id ? updated : sub));
+    setSubscribers(prev => prev.map(s => (s.id === updated.id ? updated : s)));
+    const { id: _id, ...values } = toRow(updated);
+    persist(db.update('subscribers', `id=eq.${enc(updated.id)}`, values));
   };
 
   const addSubscriber = (newSub: SubscriberAccount) => {
     setSubscribers(prev => [newSub, ...prev]);
+    persist(db.insert('subscribers', toRow(newSub)));
   };
 
-  const updateMachineryItem = (updatedItem: MachineryItem) => {
-    setMachineryCatalog(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+  const updateMachineryItem = (item: MachineryItem) => {
+    setMachineryCatalog(prev => prev.map(m => (m.id === item.id ? item : m)));
+    const sort = machineryCatalog.findIndex(m => m.id === item.id);
+    persist(db.upsert('machinery', { id: item.id, data: item, sort: Math.max(0, sort) }));
   };
 
   const updateTariffs = (newTariffs: TariffConfig) => {
@@ -262,93 +356,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       waterTariffPerM3: newTariffs.waterPerM3,
       wasteTariffPerPerson: newTariffs.wastePerPerson
     })));
+    persist(
+      db.upsert('site_config', { key: 'tariffs', value: newTariffs, updated_at: new Date().toISOString() }).then(() =>
+        db.update('subscribers', 'id=not.is.null', {
+          water_tariff_per_m3: newTariffs.waterPerM3,
+          waste_tariff_per_person: newTariffs.wastePerPerson
+        })
+      )
+    );
   };
 
   const updateSiteSettings = (updates: Partial<SiteSettings>) => {
-    // Сырсөз бул жерден өзгөртүлбөйт — changeAdminPin аркылуу гана
-    const { adminPin: _ignored, ...rest } = updates;
-    setSiteSettings(prev => ({ ...prev, ...rest }));
+    const merged = { ...siteSettings, ...updates };
+    setSiteSettings(merged);
+    persist(db.upsert('site_config', { key: 'site_settings', value: merged, updated_at: new Date().toISOString() }));
   };
 
   const updatePastureZone = (zoneId: string, updates: Partial<PastureZone>) => {
-    setPastureZones(prev => prev.map(z => z.id === zoneId ? { ...z, ...updates } : z));
+    const current = pastureZones.find(z => z.id === zoneId);
+    if (!current) return;
+    const merged = { ...current, ...updates };
+    setPastureZones(prev => prev.map(z => (z.id === zoneId ? merged : z)));
+    const sort = pastureZones.findIndex(z => z.id === zoneId);
+    persist(db.upsert('pasture_zones', { id: zoneId, data: merged, sort: Math.max(0, sort) }));
   };
 
-  const submitMeterReading = (accountId: string, newReading: number, amount: number): boolean => {
-    const sub = subscribers.find(s => s.id === accountId);
-    if (!sub || newReading < sub.waterLastMeterReading) return false;
-    setSubscribers(prev => prev.map(s =>
-      s.id === accountId
-        ? { ...s, waterLastMeterReading: newReading, waterBalance: s.waterBalance - amount }
-        : s
-    ));
-    return true;
-  };
-
-  const loginAdmin = async (pin: string): Promise<{ ok: boolean; error?: string }> => {
-    if (lockedUntil && Date.now() < lockedUntil) {
-      const sec = Math.ceil((lockedUntil - Date.now()) / 1000);
-      return { ok: false, error: `Өтө көп туура эмес аракет. ${sec} секунддан кийин кайра аракет кылыңыз.` };
-    }
-    const ok = await verifyPin(pin, siteSettings.adminPin);
-    if (ok) {
-      setFailedAttempts(0);
-      setLockedUntil(null);
-      setIsAdminLoggedIn(true);
+  const loginAdmin = async (email: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      await auth.signIn(email, password);
+      const ok = await checkAdmin();
+      if (!ok) {
+        await auth.signOut();
+        return { ok: false, error: 'Бул колдонуучу админ эмес. Supabase\'теги admins таблицасына email кошуңуз.' };
+      }
       return { ok: true };
+    } catch (e) {
+      return { ok: false, error: errText(e) };
     }
-    const attempts = failedAttempts + 1;
-    setFailedAttempts(attempts);
-    if (attempts >= MAX_LOGIN_ATTEMPTS) {
-      setLockedUntil(Date.now() + LOCKOUT_MS);
-      setFailedAttempts(0);
-      return { ok: false, error: 'Өтө көп туура эмес аракет. 1 мүнөттөн кийин кайра аракет кылыңыз.' };
-    }
-    return { ok: false, error: `Сырсөз туура эмес! (калган аракет: ${MAX_LOGIN_ATTEMPTS - attempts})` };
   };
 
-  const changeAdminPin = async (currentPin: string, newPin: string): Promise<{ ok: boolean; error?: string }> => {
-    if (!(await verifyPin(currentPin, siteSettings.adminPin))) {
-      return { ok: false, error: 'Учурдагы сырсөз туура эмес.' };
+  const changeAdminPassword = async (newPassword: string): Promise<{ ok: boolean; error?: string }> => {
+    if (newPassword.length < 8) return { ok: false, error: 'Сырсөз кеминде 8 белгиден турушу керек.' };
+    try {
+      await auth.changePassword(newPassword);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: errText(e) };
     }
-    if (newPin.trim().length < MIN_PIN_LENGTH) {
-      return { ok: false, error: `Жаңы сырсөз кеминде ${MIN_PIN_LENGTH} белгиден турушу керек.` };
-    }
-    const h = await hashPin(newPin);
-    if (h === DEFAULT_ADMIN_PIN_HASH) {
-      return { ok: false, error: 'Баштапкы сырсөздү колдонууга болбойт.' };
-    }
-    setSiteSettings(prev => ({ ...prev, adminPin: h }));
-    return { ok: true };
   };
-
-  const isDefaultAdminPin =
-    siteSettings.adminPin === DEFAULT_ADMIN_PIN_HASH || siteSettings.adminPin === '1234';
 
   const logoutAdmin = () => {
+    auth.signOut();
     setIsAdminLoggedIn(false);
+    setAdminEmail(null);
     setIsEditModeActive(false);
+    clearAdminData();
+    loadPublic().catch(() => undefined);
   };
 
+  // Мурунку "баштапкы абалга кайтаруу" чыныгы маалыматты өчүрүп салмак.
+  // Эми ал серверден маалыматты кайра жүктөйт гана.
   const resetToDefaults = () => {
-    setSubscribers(INITIAL_SUBSCRIBERS);
-    setMachineryCatalog(MACHINERY_CATALOG);
-    setMachineryOrders(INITIAL_MACHINERY_ORDERS);
-    setCitizenTickets(INITIAL_CITIZEN_TICKETS);
-    setTransactions(INITIAL_TRANSACTIONS);
-    setTariffs(INITIAL_TARIFFS);
-    // Админдин сырсөзү сакталып калат, болбосо баштапкы "1234" кайра иштеп калат
-    setSiteSettings(prev => ({ ...INITIAL_SITE_SETTINGS, adminPin: prev.adminPin }));
-    setPastureZones(PASTURE_ZONES);
-    setIsAdminLoggedIn(false);
-    setIsEditModeActive(false);
-    try {
-      Object.keys(localStorage)
-        .filter(k => k.startsWith(LOCAL_STORAGE_KEY_PREFIX))
-        .forEach(k => localStorage.removeItem(k));
-    } catch {
-      // ignore
-    }
+    refreshData();
   };
 
   return (
@@ -363,8 +432,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         siteSettings,
         pastureZones,
         isAdminLoggedIn,
+        adminEmail,
         isEditModeActive,
+        isLoading,
+        connectionError,
+        errorNotice,
+        clearErrorNotice: () => setErrorNotice(null),
         setIsEditModeActive,
+        createTicket,
+        getTicketStatus,
+        createMachineryOrder,
+        lookupSubscriber,
+        submitMeterReading,
         addPayment,
         addMachineryOrder,
         updateMachineryOrder,
@@ -376,11 +455,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateTariffs,
         updateSiteSettings,
         updatePastureZone,
-        submitMeterReading,
         loginAdmin,
-        changeAdminPin,
-        isDefaultAdminPin,
+        changeAdminPassword,
         logoutAdmin,
+        refreshData,
         resetToDefaults
       }}
     >
@@ -396,3 +474,5 @@ export const useApp = () => {
   }
   return context;
 };
+
+export { ApiError };

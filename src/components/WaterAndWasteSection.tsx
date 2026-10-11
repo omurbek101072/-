@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { WASTE_SCHEDULE } from '../types';
+import React, { useEffect, useState } from 'react';
+import { WASTE_SCHEDULE, SubscriberAccount } from '../types';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
 import { PhoneLink } from './PhoneLink';
@@ -21,7 +21,6 @@ import {
   Phone,
   Sparkles
 } from 'lucide-react';
-import { generateId, nowTimestamp } from '../utils/ids';
 import { isValidKgPhone, PHONE_ERROR } from '../utils/validation';
 
 interface WaterAndWasteSectionProps {
@@ -33,7 +32,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
   onDirectPayment,
   onOpenCitizenRequest
 }) => {
-  const { tariffs, updateTariffs, siteSettings, isAdminLoggedIn, subscribers, submitMeterReading, citizenTickets, addCitizenTicket } = useApp();
+  const { tariffs, updateTariffs, siteSettings, isAdminLoggedIn, lookupSubscriber, submitMeterReading, createTicket } = useApp();
   const [activeTab, setActiveTab] = useState<'water' | 'waste'>('water');
 
   // Calculator Sub-mode:
@@ -49,8 +48,23 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
   const [readingPhone, setReadingPhone] = useState<string>('+996 ');
   const [meterNotice, setMeterNotice] = useState<string | null>(null);
   const [meterError, setMeterError] = useState<string | null>(null);
+  const [isMeterSending, setIsMeterSending] = useState(false);
   // Абонент табылса, мурунку көрсөткүч ишкананын базасынан алынат (колго өзгөртүүгө болбойт)
-  const meterSubscriber = subscribers.find(s => s.id === accountNumber.trim().replace(/^№/, ''));
+  const [meterSubscriber, setMeterSubscriber] = useState<SubscriberAccount | null>(null);
+  useEffect(() => {
+    const acc = accountNumber.trim().replace(/^№/, '');
+    if (!acc) {
+      setMeterSubscriber(null);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      lookupSubscriber(acc)
+        .then(sub => { if (!cancelled) setMeterSubscriber(sub); })
+        .catch(() => { if (!cancelled) setMeterSubscriber(null); });
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [accountNumber]);
   const prevReading = meterSubscriber ? meterSubscriber.waterLastMeterReading : manualPrevReading;
   const setPrevReading = setManualPrevReading;
 
@@ -93,50 +107,55 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
   const activeCommRate = commercialType === 'commercial' ? waterCommercialRate : waterIrrigationRate;
   const calculatedCommercialCost = Math.round(commercialVolume * commercialMonths * activeCommRate);
 
-  // Көрсөткүчтү текшерип, абоненттин эсебине жазуу. Ийгиликтүү болсо true.
-  const recordMeterReading = (): boolean => {
+  // Көрсөткүчтү серверге жөнөтүү. Ийгиликтүү болсо эсептелген сумманы кайтарат.
+  const recordMeterReading = async (): Promise<number | null> => {
+    if (isMeterSending) return null;
     if (!meterSubscriber) {
       setMeterError('Мындай лицевой эсеп табылган жок. Квитанциядагы номерди текшериңиз.');
-      return false;
+      return null;
     }
     if (!isValidKgPhone(readingPhone)) {
       setMeterError(PHONE_ERROR);
-      return false;
+      return null;
     }
     if (currentReading <= prevReading) {
       setMeterError(`Жаңы көрсөткүч мурункудан (${prevReading} м³) чоң болушу керек.`);
-      return false;
+      return null;
     }
-    if (currentReading - prevReading > 1000) {
-      setMeterError('Сарпталган суу өтө көп чыгып жатат. Көрсөткүчтү кайра текшериңиз.');
-      return false;
+    setIsMeterSending(true);
+    try {
+      const r = await submitMeterReading(meterSubscriber.id, currentReading, readingPhone);
+      setMeterError(null);
+      setMeterNotice(`Көрсөткүч кабыл алынды (эсеп №${meterSubscriber.id})! Сарпталган суу: ${r.consumed} м³. Эсептелген сумма: ${r.amount} сом.`);
+      // Жаңы көрсөткүч жана баланс серверден
+      lookupSubscriber(meterSubscriber.id).then(setMeterSubscriber).catch(() => undefined);
+      return r.amount;
+    } catch (e) {
+      setMeterError(e instanceof Error ? e.message : 'Көрсөткүчтү сактоо мүмкүн болгон жок.');
+      return null;
+    } finally {
+      setIsMeterSending(false);
     }
-    if (!submitMeterReading(meterSubscriber.id, currentReading, calculatedWaterCost)) {
-      setMeterError('Көрсөткүчтү сактоо мүмкүн болгон жок.');
-      return false;
-    }
-    setMeterError(null);
-    setMeterNotice(`Көрсөткүч кабыл алынды (эсеп №${meterSubscriber.id})! Сарпталган суу: ${consumedM3} м³. Эсептелген сумма: ${calculatedWaterCost} сом.`);
-    return true;
   };
 
-  const handleMeterSubmit = (e: React.FormEvent) => {
+  const handleMeterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    recordMeterReading();
+    await recordMeterReading();
   };
 
-  const handlePayWaterNow = () => {
+  const handlePayWaterNow = async () => {
     // Төлөмдөн мурун көрсөткүч сөзсүз катталат, болбосо карыз эсепке алынбай калат
-    const consumed = consumedM3;
-    const cost = calculatedWaterCost;
     const prev = prevReading;
-    if (!recordMeterReading()) return;
+    const reading = currentReading;
+    const sub = meterSubscriber;
+    const amount = await recordMeterReading();
+    if (amount === null || !sub) return;
     onDirectPayment(
       'water',
-      cost,
-      `Водомер көрсөткүчү (${prev} -> ${currentReading} м³, сарпталды: ${consumed} м³, эсеп №${meterSubscriber!.id})`,
+      amount,
+      `Водомер көрсөткүчү (${prev} -> ${reading} м³, сарпталды: ${reading - prev} м³, эсеп №${sub.id})`,
       undefined,
-      meterSubscriber!.id
+      sub.id
     );
   };
 
@@ -181,7 +200,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
   const [bulkyPhone, setBulkyPhone] = useState<string>('+996 ');
   const [bulkyNotice, setBulkyNotice] = useState<string | null>(null);
 
-  const handleBulkySubmit = (e: React.FormEvent) => {
+  const handleBulkySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValidKgPhone(bulkyPhone)) {
       setBulkyNotice(PHONE_ERROR);
@@ -192,20 +211,20 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
       return;
     }
     // Өтүнмө админ панелиндеги «Арыздар» тизмесине түшөт
-    const id = generateId('ТШ', citizenTickets.map(t => t.id));
-    addCitizenTicket({
-      id,
-      category: `Ири таштанды чыгаруу: ${bulkyType}`,
-      name: 'Айыл тургуну',
-      phone: bulkyPhone.trim(),
-      address: bulkyAddress.trim(),
-      description: `Ири таштанды чыгаруу өтүнмөсү (${bulkyType})`,
-      status: 'Кабыл алынды',
-      date: nowTimestamp()
-    });
-    setBulkyNotice(`Ири таштанды чыгаруу өтүнмөсү катталды (№ ${id}). Диспетчер тактоо үчүн байланышат.`);
-    setBulkyAddress('');
-    setBulkyPhone('+996 ');
+    try {
+      const id = await createTicket({
+        category: `Ири таштанды чыгаруу: ${bulkyType}`,
+        name: '',
+        phone: bulkyPhone.trim(),
+        address: bulkyAddress.trim(),
+        description: `Ири таштанды чыгаруу өтүнмөсү (${bulkyType})`
+      });
+      setBulkyNotice(`Ири таштанды чыгаруу өтүнмөсү катталды (№ ${id}). Диспетчер тактоо үчүн байланышат.`);
+      setBulkyAddress('');
+      setBulkyPhone('+996 ');
+    } catch (err) {
+      setBulkyNotice(err instanceof Error ? err.message : 'Жөнөтүүдө ката кетти.');
+    }
   };
 
   return (

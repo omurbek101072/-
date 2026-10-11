@@ -85,9 +85,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   const [activeReceipt, setActiveReceipt] = useState<PaymentTransaction | null>(null);
 
   // --- 1. CASHIER FORM STATE ---
-  const [cashierAccountId, setCashierAccountId] = useState('1042');
-  const [cashierPayerName, setCashierPayerName] = useState('Асанбек уулу Нурлан');
-  const [cashierPhone, setCashierPhone] = useState('+996 (702) 45-88-12');
+  const [cashierAccountId, setCashierAccountId] = useState('');
+  const [cashierPayerName, setCashierPayerName] = useState('');
+  const [cashierPhone, setCashierPhone] = useState('');
   const [cashierService, setCashierService] = useState<'water' | 'waste' | 'pasture' | 'machinery'>('water');
   const [cashierAmount, setCashierAmount] = useState<number>(240);
   const [cashierMethod, setCashierMethod] = useState<'Накталай (Касса)' | 'MBank' | 'Optima24' | 'Банк картасы'>('Накталай (Касса)');
@@ -109,6 +109,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   const handleExecuteCashierPayment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!(cashierAmount >= 1)) return;
+    if (cashierService !== 'machinery' && !subscribers.some(s => s.id === cashierAccountId.trim())) {
+      showNotice(`Лицевой эсеп № ${cashierAccountId || '—'} табылган жок. Тизмеден абонентти тандаңыз.`);
+      return;
+    }
 
     let sName = 'Таза суу акысы';
     if (cashierService === 'waste') sName = 'Катуу тиричилик калдыктары';
@@ -121,7 +125,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       timestamp: nowTimestamp(),
       payerName: cashierPayerName,
       payerPhone: cashierPhone,
-      accountId: cashierAccountId,
+      accountId: cashierAccountId.trim(),
       serviceType: cashierService,
       serviceName: sName,
       amount: Math.round(Number(cashierAmount)),
@@ -450,15 +454,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
           <div className="pt-4 border-t border-stone-200 text-[11px] text-stone-400 space-y-2">
             <button
               onClick={() => {
-                if (confirm('Бардык маалыматтарды баштапкы абалга кайтарууну каалайсызбы?')) {
-                  resetToDefaults();
-                  showNotice('Маалыматтар баштапкы калыбына келтирилди.');
-                }
+                resetToDefaults();
+                showNotice('Маалыматтар серверден кайра жүктөлдү.');
               }}
               className="w-full text-left text-stone-500 hover:text-rose-600 py-1 transition-colors cursor-pointer flex items-center gap-1.5"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Базаны баштапкыга келтирүү</span>
+              <span>Серверден жаңыртуу</span>
             </button>
             <div className="font-mono text-[10px]">Версия 2.4-КИ · 2026</div>
           </div>

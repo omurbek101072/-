@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { MachineryItem, MachineryOrder } from '../types';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
-import { generateId, nowTimestamp } from '../utils/ids';
 import { isValidKgPhone, PHONE_ERROR, todayIso } from '../utils/validation';
 import { Truck, Clock, Fuel, ShieldCheck, CheckCircle2, Calendar, Phone, ArrowRight, UserCheck, AlertCircle, X } from 'lucide-react';
 
@@ -11,7 +10,8 @@ interface MachineryFleetSectionProps {
 }
 
 export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ onDirectPayment }) => {
-  const { machineryCatalog, machineryOrders, addMachineryOrder } = useApp();
+  const { machineryCatalog, createMachineryOrder } = useApp();
+  const [isSending, setIsSending] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [bookingItem, setBookingItem] = useState<MachineryItem | null>(null);
   
@@ -64,52 +64,59 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
     return null;
   };
 
-  const buildOrder = (item: MachineryItem): MachineryOrder => ({
-    id: generateId('ORD', machineryOrders.map(o => o.id)),
+  const buildOrderInput = (item: MachineryItem) => ({
     machineId: item.id,
     machineName: item.name,
-    customerName: customerName.trim() || 'Айыл тургуну',
+    customerName: customerName.trim(),
     customerPhone: customerPhone.trim(),
     address: workAddress.trim(),
     workDescription,
     orderDate: bookingDate,
     orderType,
     units: orderType === 'hours' ? hoursCount : orderType === 'shift' ? shiftsCount : tripsCount,
-    totalEstimate: calculateEstimate(item),
-    status: 'жаңы',
-    // Төлөм чындап өткөндө гана "төлөндү" болот (OnlinePaymentHub)
-    paymentStatus: 'күтүлүүдө',
-    createdAt: nowTimestamp()
+    // Акыркы баа серверде тарифтер боюнча кайра эсептелет
+    totalEstimate: calculateEstimate(item)
   });
 
-  const handleSubmitBooking = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!bookingItem) return;
+  // Заказды серверге жөнөтүү. Ийгиликтүү болсо заказдын номерин кайтарат
+  const sendOrder = async (): Promise<string | null> => {
+    if (!bookingItem || isSending) return null;
     const err = validateBooking();
     if (err) {
       setBookingError(err);
-      return;
+      return null;
     }
+    setIsSending(true);
+    try {
+      const id = await createMachineryOrder(buildOrderInput(bookingItem));
+      setBookingError(null);
+      return id;
+    } catch (e) {
+      setBookingError(e instanceof Error ? e.message : 'Заказды жөнөтүүдө ката кетти.');
+      return null;
+    } finally {
+      setIsSending(false);
+    }
+  };
 
-    const newOrder = buildOrder(bookingItem);
-    addMachineryOrder(newOrder);
-    setBookingNotice(`Өтүнмө № ${newOrder.id} кабыл алынды! Диспетчер сиз менен байланышат.`);
+  const handleSubmitBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const id = await sendOrder();
+    if (!id) return;
+    setBookingNotice(`Өтүнмө № ${id} кабыл алынды! Диспетчер сиз менен байланышат.`);
     setBookingItem(null);
   };
 
-  const handlePayNow = () => {
+  const handlePayNow = async () => {
     if (!bookingItem) return;
-    const err = validateBooking();
-    if (err) {
-      setBookingError(err);
-      return;
-    }
-    const newOrder = buildOrder(bookingItem);
-    addMachineryOrder(newOrder);
-
-    const orderDetails = `Заказ № ${newOrder.id}: ${bookingItem.name} (${bookingItem.model}) ижарасы, ${orderType === 'hours' ? `${hoursCount} саат` : orderType === 'shift' ? `${shiftsCount} смена` : `${tripsCount} рейс`}`;
+    const item = bookingItem;
+    const estimate = calculateEstimate(item);
+    const id = await sendOrder();
+    if (!id) return;
+    const orderDetails = `Заказ № ${id}: ${item.name} (${item.model}) ижарасы, ${orderType === 'hours' ? `${hoursCount} саат` : orderType === 'shift' ? `${shiftsCount} смена` : `${tripsCount} рейс`}`;
+    setBookingNotice(`Өтүнмө № ${id} кабыл алынды!`);
     setBookingItem(null);
-    onDirectPayment('machinery', newOrder.totalEstimate, orderDetails, newOrder.id);
+    onDirectPayment('machinery', estimate, orderDetails, id);
   };
 
   return (
@@ -464,14 +471,16 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="px-3 py-2 bg-stone-800 hover:bg-stone-900 text-white font-semibold rounded-lg text-xs cursor-pointer shadow-xs"
+                    disabled={isSending}
+                    className="disabled:opacity-60 px-3 py-2 bg-stone-800 hover:bg-stone-900 text-white font-semibold rounded-lg text-xs cursor-pointer shadow-xs"
                   >
                     Өтүнмө калтыруу
                   </button>
                   <button
                     type="button"
                     onClick={handlePayNow}
-                    className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs cursor-pointer shadow-xs"
+                    disabled={isSending}
+                    className="disabled:opacity-60 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs cursor-pointer shadow-xs"
                   >
                     Азыр онлайн төлөө
                   </button>

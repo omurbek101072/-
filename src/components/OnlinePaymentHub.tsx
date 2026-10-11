@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SubscriberAccount, PaymentTransaction } from '../types';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
@@ -26,17 +26,22 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
   initialOrderId,
   initialAccountId
 }) => {
-  const { subscribers, transactions, addPayment, isAdminLoggedIn, updateMachineryOrder } = useApp();
+  const { subscribers, transactions, isAdminLoggedIn, lookupSubscriber } = useApp();
 
   const [searchQuery, setSearchQuery] = useState(initialAccountId || '');
   const [searchNotFound, setSearchNotFound] = useState(false);
-  // Абоненттин көчүрмөсүн эмес, ID'син сактайбыз: төлөмдөн кийин баланс дароо жаңырат
-  const [selectedSubscriberId, setSelectedSubscriberId] = useState<string | null>(initialAccountId || null);
-  const selectedSubscriber: SubscriberAccount | null =
-    subscribers.find(s => s.id === selectedSubscriberId) || null;
+  // Эл үчүн абонент серверден (аты жашырылган түрдө) алынат.
+  // Админ үчүн толук маалымат анын жүктөлгөн тизмесинен алынат.
+  const [selectedSubscriberId, setSelectedSubscriberId] = useState<string | null>(null);
+  const [lookedUp, setLookedUp] = useState<SubscriberAccount | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const selectedSubscriber: SubscriberAccount | null = selectedSubscriberId
+    ? (isAdminLoggedIn ? subscribers.find(s => s.id === selectedSubscriberId) : undefined) || lookedUp
+    : null;
   const [serviceType, setServiceType] = useState<'water' | 'waste' | 'pasture' | 'machinery'>(initialServiceType || 'water');
   const [customAmount, setCustomAmount] = useState<number>(initialAmount || 240);
-  const [pendingOrderId, setPendingOrderId] = useState<string | undefined>(initialOrderId);
+  const pendingOrderId = initialOrderId;
   const [customPayerName, setCustomPayerName] = useState('');
   const [customPayerPhone, setCustomPayerPhone] = useState('+996 ');
   const [amountError, setAmountError] = useState<string | null>(null);
@@ -47,51 +52,80 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
   const [activeReceipt, setActiveReceipt] = useState<PaymentTransaction | null>(null);
   const [paymentSuccessNotice, setPaymentSuccessNotice] = useState<string | null>(null);
 
-  // Search for subscriber account
-  const handleSearch = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const query = searchQuery.trim().toLowerCase().replace(/^№/, '');
-    if (!query) return;
-
-    // Жеке маалыматты коргоо: эл үчүн так эсеп номери боюнча гана издөө.
-    // Аты-жөнү же дареги боюнча издөө администраторго гана жеткиликтүү.
-    const found = subscribers.find(
-      s => s.id.toLowerCase() === query ||
-           (isAdminLoggedIn && (
-             s.fullName.toLowerCase().includes(query) ||
-             s.address.toLowerCase().includes(query)
-           ))
-    );
-
-    if (found) {
-      setSearchNotFound(false);
-      setSelectedSubscriberId(found.id);
-      if (isAdminLoggedIn) {
-        setCustomPayerName(found.fullName);
-        setCustomPayerPhone(found.phone);
-      }
-      // Auto-set amount based on service debt
-      if (serviceType === 'water') {
-        const debt = Math.abs(Math.min(0, found.waterBalance));
-        setCustomAmount(debt > 0 ? debt : 200);
-        setPaymentDetails(`Суу акысы (Лицевой эсеп: ${found.id})`);
-      } else if (serviceType === 'waste') {
-        const debt = Math.abs(Math.min(0, found.wasteBalance));
-        setCustomAmount(debt > 0 ? debt : found.wasteFamilyMembers * found.wasteTariffPerPerson);
-        setPaymentDetails(`Таштанды чыгаруу акысы (${found.wasteFamilyMembers} адам)`);
-      } else if (serviceType === 'pasture') {
-        const debt = Math.abs(Math.min(0, found.pastureBalance));
-        setCustomAmount(debt > 0 ? debt : 500);
-        setPaymentDetails(`Жайыт пайдалануу акысы`);
-      }
-    } else {
-      setSelectedSubscriberId(null);
-      setSearchNotFound(true);
+  const applyFoundSubscriber = (found: SubscriberAccount) => {
+    setSearchNotFound(false);
+    setSelectedSubscriberId(found.id);
+    setLookedUp(found);
+    if (isAdminLoggedIn) {
+      setCustomPayerName(found.fullName);
+      setCustomPayerPhone(found.phone);
+    }
+    // Карыз боюнча сумманы автоматтык коюу
+    if (serviceType === 'water') {
+      const debt = Math.abs(Math.min(0, found.waterBalance));
+      setCustomAmount(debt > 0 ? debt : 200);
+      setPaymentDetails(`Суу акысы (Лицевой эсеп: ${found.id})`);
+    } else if (serviceType === 'waste') {
+      const debt = Math.abs(Math.min(0, found.wasteBalance));
+      setCustomAmount(debt > 0 ? debt : found.wasteFamilyMembers * found.wasteTariffPerPerson);
+      setPaymentDetails(`Таштанды чыгаруу акысы (${found.wasteFamilyMembers} адам)`);
+    } else if (serviceType === 'pasture') {
+      const debt = Math.abs(Math.min(0, found.pastureBalance));
+      setCustomAmount(debt > 0 ? debt : 500);
+      setPaymentDetails(`Жайыт пайдалануу акысы`);
     }
   };
 
+  const findSubscriber = async (rawQuery: string, keepAmount = false) => {
+    const query = rawQuery.trim().toLowerCase().replace(/^№/, '');
+    if (!query) return;
+    setSearchError(null);
+
+    // Админ өзүнүн тизмесинен аты же дареги боюнча да издей алат
+    if (isAdminLoggedIn) {
+      const local = subscribers.find(
+        s => s.id.toLowerCase() === query ||
+             s.fullName.toLowerCase().includes(query) ||
+             s.address.toLowerCase().includes(query)
+      );
+      if (local) {
+        if (keepAmount) { setSelectedSubscriberId(local.id); setLookedUp(local); } else applyFoundSubscriber(local);
+        return;
+      }
+    }
+
+    // Эл үчүн: так эсеп номери боюнча гана, сервер аты-жөнүн жашырып берет
+    setIsSearching(true);
+    try {
+      const found = await lookupSubscriber(query);
+      if (found) {
+        if (keepAmount) { setSearchNotFound(false); setSelectedSubscriberId(found.id); setLookedUp(found); }
+        else applyFoundSubscriber(found);
+      } else {
+        setSelectedSubscriberId(null);
+        setLookedUp(null);
+        setSearchNotFound(true);
+      }
+    } catch (err) {
+      setSearchError(err instanceof Error ? err.message : 'Издөөдө ката кетти.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    findSubscriber(searchQuery);
+  };
+
+  // Башка бөлүмдөн эсеп номери менен келсе — эсепти дароо ачабыз (сумманы өзгөртпөй)
+  useEffect(() => {
+    if (initialAccountId) findSubscriber(initialAccountId, true);
+  }, [initialAccountId]);
+
   const handleClearSubscriber = () => {
     setSelectedSubscriberId(null);
+    setLookedUp(null);
     setSearchQuery('');
     setSearchNotFound(false);
   };
@@ -149,7 +183,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
     setTimeout(() => {
       const newTx: PaymentTransaction = {
         id: `tx-${Date.now()}`,
-        receiptNumber: generateId('TZL', transactions.map(t => t.receiptNumber)),
+        receiptNumber: generateId(PAYMENTS_DEMO_MODE ? 'DEMO' : 'TZL', transactions.map(t => t.receiptNumber)),
         timestamp: nowTimestamp(),
         payerName,
         payerPhone,
@@ -162,15 +196,16 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
         details: paymentDetails
       };
 
-      addPayment(newTx);
-      // Техника заказы төлөм чындап өткөндөн кийин гана "төлөндү" болот
-      if (serviceType === 'machinery' && pendingOrderId) {
-        updateMachineryOrder(pendingOrderId, { paymentStatus: 'төлөндү', status: 'кабыл алынды' });
-        setPendingOrderId(undefined);
-      }
+      // Демо режимде төлөм базага жазылбайт: карыз жалган төлөм менен жабылып калбашы керек.
+      // Чыныгы төлөм банктан келген ырастоо (webhook) аркылуу же админдин кассасы аркылуу гана катталат.
+      // Техника заказы да ошол учурда гана «төлөндү» болот.
       setActiveReceipt(newTx);
       setIsProcessing(false);
-      setPaymentSuccessNotice(`Төлөм ийгиликтүү өттү! Квитанция № ${newTx.receiptNumber}`);
+      setPaymentSuccessNotice(
+        PAYMENTS_DEMO_MODE
+          ? `Демо квитанция № ${newTx.receiptNumber} түзүлдү. Чыныгы төлөм катталган жок.`
+          : `Төлөм ийгиликтүү өттү! Квитанция № ${newTx.receiptNumber}`
+      );
     }, 600);
   };
 
@@ -240,13 +275,18 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                 </div>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition-colors cursor-pointer"
+                  disabled={isSearching}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-60 rounded-lg transition-colors cursor-pointer"
                 >
-                  Издөө
+                  {isSearching ? '...' : 'Издөө'}
                 </button>
               </form>
 
               {/* Sample Quick Account Selectors */}
+              {searchError && (
+                <p className="mt-2 text-[11px] text-rose-600 font-semibold">{searchError}</p>
+              )}
+
               {searchNotFound && (
                 <p className="mt-2 text-[11px] text-rose-600 font-semibold">
                   Мындай эсеп номери табылган жок. Квитанциядагы номерди текшериңиз.
@@ -265,6 +305,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                       setSearchQuery(s.id);
                       setSearchNotFound(false);
                       setSelectedSubscriberId(s.id);
+                      setLookedUp(s);
                       setCustomPayerName(s.fullName);
                       setCustomPayerPhone(s.phone);
                     }}
@@ -670,6 +711,11 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
+                {transactions.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-6 text-center text-stone-400">Азырынча катталган төлөм жок</td>
+                  </tr>
+                )}
                 {(isAdminLoggedIn ? transactions : transactions.slice(0, 10)).map((tx) => (
                   <tr key={tx.id} className="hover:bg-stone-50/60 transition-colors">
                     <td className="py-3 px-3 font-mono font-medium text-stone-900">

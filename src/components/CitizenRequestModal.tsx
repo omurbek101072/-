@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { X, Send, AlertTriangle, CheckCircle2, Camera, Phone, MapPin, Search } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { CitizenTicket } from '../types';
-import { generateId, nowTimestamp } from '../utils/ids';
 import { isValidKgPhone, PHONE_ERROR } from '../utils/validation';
 
 // Сүрөттү кичирейтип (макс. 1024px, JPEG) data URL кылуу — браузердин сактагычына батышы үчүн
@@ -35,7 +34,8 @@ interface CitizenRequestModalProps {
 }
 
 export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen, onClose }) => {
-  const { citizenTickets, addCitizenTicket } = useApp();
+  const { createTicket, getTicketStatus } = useApp();
+  const [isSending, setIsSending] = useState(false);
   const [activeTab, setActiveTab] = useState<'create' | 'check'>('create');
   
   // Form fields
@@ -53,6 +53,7 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
   const [checkId, setCheckId] = useState<string>('');
   const [foundTicket, setFoundTicket] = useState<CitizenTicket | null>(null);
   const [ticketNotFound, setTicketNotFound] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -91,8 +92,9 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSending) return;
     if (!isValidKgPhone(phone)) {
       setFormError(PHONE_ERROR);
       return;
@@ -102,31 +104,50 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
       return;
     }
     setFormError(null);
-    const newTicket: CitizenTicket = {
-      id: generateId('ТЗЛ', citizenTickets.map(t => t.id)),
-      category,
-      name: name.trim() || 'Айыл тургуну',
-      phone: phone.trim(),
-      address: address.trim(),
-      description: description.trim(),
-      status: 'Кабыл алынды',
-      date: nowTimestamp(),
-      ...(photo ? { photo } : {})
-    };
-    addCitizenTicket(newTicket);
-    setCreatedTicket(newTicket);
-    resetForm();
+    setIsSending(true);
+    try {
+      const id = await createTicket({
+        category,
+        name: name.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        description: description.trim(),
+        ...(photo ? { photo } : {})
+      });
+      setCreatedTicket({
+        id,
+        category,
+        name: name.trim() || 'Айыл тургуну',
+        phone: phone.trim(),
+        address: address.trim(),
+        description: description.trim(),
+        status: 'Кабыл алынды',
+        date: new Date().toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
+      });
+      resetForm();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Жөнөтүүдө ката кетти. Кайра аракет кылыңыз.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
-  const handleSearchTicket = (e: React.FormEvent) => {
+  const handleSearchTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     const q = checkId.trim().toUpperCase();
     if (q) {
       const cleaned = q.replace(/^№\s*/, '');
-      const match = citizenTickets.find(t => t.id.toUpperCase() === cleaned);
-      // Жок арыз үчүн жасалма жыйынтык көрсөтпөйбүз
-      setFoundTicket(match || null);
-      setTicketNotFound(!match);
+      setCheckError(null);
+      try {
+        const match = await getTicketStatus(cleaned);
+        // Жок арыз үчүн жасалма жыйынтык көрсөтпөйбүз
+        setFoundTicket(match);
+        setTicketNotFound(!match);
+      } catch (err) {
+        setFoundTicket(null);
+        setTicketNotFound(false);
+        setCheckError(err instanceof Error ? err.message : 'Текшерүүдө ката кетти.');
+      }
     }
   };
 
@@ -319,10 +340,11 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                    disabled={isSending}
+                    className="w-full disabled:opacity-60 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    <span>Диспетчерге жөнөтүү</span>
+                    <span>{isSending ? 'Жөнөтүлүүдө...' : 'Диспетчерге жөнөтүү'}</span>
                   </button>
                 </div>
               </form>
@@ -344,6 +366,10 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
                   Текшерүү
                 </button>
               </form>
+
+              {checkError && (
+                <div className="p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 font-semibold">{checkError}</div>
+              )}
 
               {ticketNotFound && (
                 <div className="p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 font-semibold">

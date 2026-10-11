@@ -1,5 +1,3 @@
-import { DEFAULT_ADMIN_PIN_HASH } from '../utils/security';
-
 export interface SubscriberAccount {
   id: string; // e.g. "1042"
   fullName: string;
@@ -117,8 +115,6 @@ export interface SiteSettings {
   inn: string;
   okpo: string;
 
-  // 6. Администратордун сырсөзү (SHA-256 хэш түрүндө сакталат, ачык текст эмес)
-  adminPin: string;
 }
 
 export const INITIAL_SITE_SETTINGS: SiteSettings = {
@@ -158,9 +154,7 @@ export const INITIAL_SITE_SETTINGS: SiteSettings = {
   bankAccount: "1290123456780192",
   bankBik: "129001",
   inn: "01204201010045",
-  okpo: "29481023",
-
-  adminPin: (import.meta.env.VITE_ADMIN_PIN_HASH as string | undefined) || DEFAULT_ADMIN_PIN_HASH
+  okpo: "29481023"
 };
 
 export interface TariffConfig {

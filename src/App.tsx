@@ -18,6 +18,24 @@ import { AdminPanel } from './components/AdminPanel';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { AdminTopBar } from './components/AdminTopBar';
 
+// Сервер менен байланыш жок болсо же админдин өзгөртүүсү сакталбаса — экранга чыгаруу
+function StatusBanner() {
+  const { connectionError, errorNotice, clearErrorNotice, refreshData } = useApp();
+  if (!connectionError && !errorNotice) return null;
+  return (
+    <div className="bg-rose-700 text-white text-xs px-4 py-2" role="alert">
+      <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+        <span className="font-semibold">{errorNotice || `Сервер менен байланыш жок: ${connectionError}`}</span>
+        {errorNotice ? (
+          <button type="button" onClick={clearErrorNotice} className="underline cursor-pointer">Жабуу</button>
+        ) : (
+          <button type="button" onClick={() => refreshData()} className="underline cursor-pointer">Кайра аракет кылуу</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function MainAppContent() {
   const { isAdminLoggedIn } = useApp();
   const [activeTab, setActiveTab] = useState<string>('overview');
@@ -96,6 +114,8 @@ function MainAppContent() {
     <div className="min-h-screen flex flex-col bg-stone-50 text-stone-900">
       {/* Admin Status Ribbon (ONLY visible to authenticated administrator) */}
       <AdminTopBar onOpenAdminPanel={() => setIsAdminOpen(true)} />
+
+      <StatusBanner />
 
       {/* Top Header */}
       <Header

@@ -16,11 +16,9 @@ import {
   ShieldCheck,
   Sparkles
 } from 'lucide-react';
-import { MIN_PIN_LENGTH } from '../utils/security';
 
 export const SiteContentEditor: React.FC = () => {
-  const { siteSettings, updateSiteSettings, pastureZones, updatePastureZone, changeAdminPin, isDefaultAdminPin } = useApp();
-  const [pinCurrent, setPinCurrent] = useState('');
+  const { siteSettings, updateSiteSettings, pastureZones, updatePastureZone, changeAdminPassword, adminEmail } = useApp();
   const [pinNew, setPinNew] = useState('');
   const [pinConfirm, setPinConfirm] = useState('');
   const [pinMessage, setPinMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -30,10 +28,9 @@ export const SiteContentEditor: React.FC = () => {
       setPinMessage({ ok: false, text: 'Жаңы сырсөздөр дал келбейт.' });
       return;
     }
-    const result = await changeAdminPin(pinCurrent, pinNew);
+    const result = await changeAdminPassword(pinNew);
     if (result.ok) {
       setPinMessage({ ok: true, text: 'Сырсөз ийгиликтүү алмаштырылды!' });
-      setPinCurrent('');
       setPinNew('');
       setPinConfirm('');
     } else {
@@ -64,7 +61,7 @@ export const SiteContentEditor: React.FC = () => {
 
   const handleResetToDefault = () => {
     if (confirm('Бардык аталыштарды баштапкы абалга келтирүүнү каалайсызбы?')) {
-      setFormData({ ...INITIAL_SITE_SETTINGS, adminPin: siteSettings.adminPin });
+      setFormData(INITIAL_SITE_SETTINGS);
       updateSiteSettings(INITIAL_SITE_SETTINGS);
       setSuccessMessage('Баштапкы аталыштар калыбына келтирилди!');
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -140,7 +137,7 @@ export const SiteContentEditor: React.FC = () => {
           { id: 'sections', label: '3. Бөлүмдөрдүн аталыштары', icon: LayoutGrid },
           { id: 'contacts', label: '4. Байланыш жана Реквизиттер', icon: Phone },
           { id: 'pasture_zones', label: '5. Жайыт зоналары (Жайлоолор)', icon: Mountain },
-          { id: 'security', label: '6. Админ PIN-код (Сырсөз)', icon: KeyRound }
+          { id: 'security', label: '6. Админдин сырсөзү', icon: KeyRound }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = subTab === tab.id;
@@ -735,29 +732,19 @@ export const SiteContentEditor: React.FC = () => {
             <div className="border-b border-stone-100 pb-3">
               <h3 className="text-sm font-bold text-stone-900 flex items-center gap-2">
                 <KeyRound className="w-4 h-4 text-emerald-700" />
-                <span>Администратордун коопсуздук PIN-коду</span>
+                <span>Администратордун сырсөзү</span>
               </h3>
               <p className="text-[11px] text-stone-500 mt-0.5">
-                Башкаруу панелине жана маалыматтарды өзгөртүүгө кирүү үчүн жашыруун сырсөз
+                Башкаруу панелине кирүү үчүн сырсөздү алмаштыруу
               </p>
             </div>
 
-            {isDefaultAdminPin && (
-              <div className="p-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-[11px] font-semibold">
-                Азыр баштапкы сырсөз колдонулууда. Аны сөзсүз жаңы сырсөзгө алмаштырыңыз!
-              </div>
-            )}
+            <p className="text-[11px] text-stone-600">
+              Кирген аккаунт: <span className="font-mono font-bold">{adminEmail}</span>
+            </p>
 
             <div className="space-y-2">
-              <label className="block text-stone-700 font-bold">Учурдагы сырсөз:</label>
-              <input
-                type="password"
-                autoComplete="current-password"
-                value={pinCurrent}
-                onChange={(e) => setPinCurrent(e.target.value)}
-                className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg font-mono text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-              />
-              <label className="block text-stone-700 font-bold">Жаңы сырсөз (кеминде {MIN_PIN_LENGTH} белги):</label>
+              <label className="block text-stone-700 font-bold">Жаңы сырсөз (кеминде 8 белги):</label>
               <input
                 type="password"
                 autoComplete="new-password"
@@ -786,8 +773,8 @@ export const SiteContentEditor: React.FC = () => {
                 Сырсөздү алмаштыруу
               </button>
               <p className="text-[11px] text-stone-500">
-                Сырсөз шифрленген (хэш) түрүндө сакталат жана эч жерде көрсөтүлбөйт.
-                Бул сырсөздү кызматкерлер гана билиши керек.
+                Сырсөз Supabase'те шифрленген түрдө сакталат. Жаңы админ кошуу үчүн
+                Supabase → Authentication бөлүмүнөн колдонуучу түзүп, анын email'ин admins таблицасына кошуңуз.
               </p>
             </div>
           </div>

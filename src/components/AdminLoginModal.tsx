@@ -10,6 +10,7 @@ interface AdminLoginModalProps {
 
 export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const { loginAdmin } = useApp();
+  const [email, setEmail] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isChecking, setIsChecking] = useState(false);
@@ -26,14 +27,14 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
     e.preventDefault();
     if (isChecking) return;
     setIsChecking(true);
-    const result = await loginAdmin(pin);
+    const result = await loginAdmin(email, pin);
     setIsChecking(false);
     setPin('');
     if (result.ok) {
       setError(null);
       onSuccess();
     } else {
-      setError(result.error || 'Сырсөз туура эмес! Кайра текшерип жазыңыз.');
+      setError(result.error || 'Email же сырсөз туура эмес.');
     }
   };
 
@@ -62,16 +63,29 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
 
         <form onSubmit={handleSubmit} className="space-y-3 text-xs">
           <div>
-            <label className="block text-stone-700 font-semibold mb-1">
-              Администратордун сырсөзү же PIN-коду:
-            </label>
+            <label className="block text-stone-700 font-semibold mb-1">Email:</label>
+            <input
+              type="email"
+              autoComplete="username"
+              required
+              autoFocus
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError(null);
+              }}
+              placeholder="admin@example.com"
+              className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-stone-700 font-semibold mb-1">Сырсөз:</label>
             <div className="relative">
               <KeyRound className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="password"
                 autoComplete="current-password"
                 required
-                autoFocus
                 value={pin}
                 onChange={(e) => {
                   setPin(e.target.value);
@@ -97,7 +111,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
               className="w-full disabled:opacity-60 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-2"
             >
               <Lock className="w-3.5 h-3.5" />
-              <span>Башкаруу панелине кирүү</span>
+              <span>{isChecking ? 'Текшерилүүдө...' : 'Башкаруу панелине кирүү'}</span>
             </button>
 
           </div>
