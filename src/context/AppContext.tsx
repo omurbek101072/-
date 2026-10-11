@@ -164,7 +164,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const t = config.find(c => c.key === 'tariffs');
     if (s) setSiteSettings({ ...INITIAL_SITE_SETTINGS, ...s.value });
     if (t) setTariffs({ ...INITIAL_TARIFFS, ...t.value });
-    if (machines.length) setMachineryCatalog(machines.map(m => m.data));
+    // Сүрөт жолдорун салыштырмалуу кылабыз (сайт папкадан ачылса да иштеши үчүн)
+    if (machines.length) setMachineryCatalog(machines.map(m => ({ ...m.data, image: m.data.image?.replace(/^\/images\//, 'images/') })));
     if (zones.length) setPastureZones(zones.map(z => z.data));
     setTransactions(recent || []);
   }, []);

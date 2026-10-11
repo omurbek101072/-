@@ -60,7 +60,7 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
         {/* Section Header with Kyrgyz pasture banner image */}
         <div className="relative rounded-3xl overflow-hidden bg-stone-900 text-white mb-10 shadow-lg">
           <img
-            src="/images/tazalyk_pasture_landscape_1791715452252.jpg"
+            src="images/tazalyk_pasture_landscape_1791715452252.jpg"
             alt="Кыргыз жайлоосу жана жайыттары"
             referrerPolicy="no-referrer"
             className="w-full h-56 sm:h-72 object-cover object-center opacity-70"

@@ -351,7 +351,7 @@ export const MACHINERY_CATALOG: MachineryItem[] = [
     year: 2023,
     hourlyRate: 2600,
     shiftRate: 19000,
-    image: "/images/tazalyk_machinery_excavator_1791715428773.jpg",
+    image: "images/tazalyk_machinery_excavator_1791715428773.jpg",
     status: "бош",
     specs: {
       capacity: "0.9 м³ чөмүч, казуу тереңдиги 6.6 м",
@@ -370,7 +370,7 @@ export const MACHINERY_CATALOG: MachineryItem[] = [
     year: 2022,
     hourlyRate: 2100,
     shiftRate: 15500,
-    image: "/images/tazalyk_machinery_excavator_1791715428773.jpg",
+    image: "images/tazalyk_machinery_excavator_1791715428773.jpg",
     status: "бош",
     specs: {
       capacity: "Алдыңкы чөмүч 1.1 м³, арткы 0.3 м³",
@@ -390,7 +390,7 @@ export const MACHINERY_CATALOG: MachineryItem[] = [
     hourlyRate: 1800,
     shiftRate: 13000,
     tripRate: 2500,
-    image: "/images/tazalyk_machinery_excavator_1791715428773.jpg",
+    image: "images/tazalyk_machinery_excavator_1791715428773.jpg",
     status: "иште",
     specs: {
       capacity: "15 тонна / 10.5 м³ чанагы",
@@ -410,7 +410,7 @@ export const MACHINERY_CATALOG: MachineryItem[] = [
     hourlyRate: 800,
     shiftRate: 5500,
     tripRate: 900,
-    image: "/images/tazalyk_machinery_excavator_1791715428773.jpg",
+    image: "images/tazalyk_machinery_excavator_1791715428773.jpg",
     status: "бош",
     specs: {
       capacity: "1.5 тонна борт",
@@ -430,7 +430,7 @@ export const MACHINERY_CATALOG: MachineryItem[] = [
     hourlyRate: 1900,
     shiftRate: 14000,
     tripRate: 1600,
-    image: "/images/tazalyk_clean_water_source_1791715441093.jpg",
+    image: "images/tazalyk_clean_water_source_1791715441093.jpg",
     status: "бош",
     specs: {
       capacity: "Цистерна 4.0 м³, шланга 15 метр",
@@ -450,7 +450,7 @@ export const MACHINERY_CATALOG: MachineryItem[] = [
     hourlyRate: 1500,
     shiftRate: 11000,
     tripRate: 1700,
-    image: "/images/tazalyk_clean_water_source_1791715441093.jpg",
+    image: "images/tazalyk_clean_water_source_1791715441093.jpg",
     status: "бош",
     specs: {
       capacity: "Тамак-аш цистернасы 6.0 м³",

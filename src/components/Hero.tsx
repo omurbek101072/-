@@ -21,7 +21,7 @@ export const Hero: React.FC<HeroProps> = ({
       {/* Background Hero Image with measured scrim */}
       <div className="absolute inset-0 z-0">
         <img
-          src="/images/tazalyk_hero_village_1791715414641.jpg"
+          src="images/tazalyk_hero_village_1791715414641.jpg"
           alt="Кыргыз айылынын көрүнүшү жана таза көчөлөрү"
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000"
