@@ -1,0 +1,6 @@
+{
+  "name": "«Тазалык» муниципалдык ишканасы",
+  "description": "Айыл өкмөттүн тазалык, таза суу, калдыктарды башкаруу, онлайн төлөмдөр, жайыт пайдалануу жана атайын техника ижарасы боюнча расмий порталы",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
