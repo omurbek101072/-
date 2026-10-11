@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { EditableText } from './EditableText';
+import { downloadDocument, DOC_MISSING_MESSAGE } from '../utils/documents';
 import { FileText, Download, CheckCircle2, TrendingUp, BarChart3, AlertCircle, Calendar, ShieldCheck } from 'lucide-react';
 
 export const ReportsSection: React.FC = () => {
   const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
 
-  const handleDownload = (fileName: string) => {
-    setDownloadNotice(`«${fileName}» файлы жүктөлүп алынды.`);
-    setTimeout(() => setDownloadNotice(null), 3500);
+  const handleDownload = async (fileName: string, path: string) => {
+    const ok = await downloadDocument(path, fileName);
+    setDownloadNotice(ok ? `«${fileName}» файлы жүктөлүп жатат.` : DOC_MISSING_MESSAGE);
+    setTimeout(() => setDownloadNotice(null), 5000);
   };
 
   const newsItems = [
@@ -141,26 +143,26 @@ export const ReportsSection: React.FC = () => {
               </h4>
               <div className="space-y-2">
                 {[
-                  { name: '«Тазалык» МИ 2025-жылдык толук финансылык отчету.pdf', size: '2.8 MB' },
-                  { name: 'Айылдык Кеңештин тарифтер жөнүндө Токтому (№14-2026).pdf', size: '1.2 MB' },
-                  { name: 'Жайыт пайдалануучулар бирикмесинин планы жана сметасы.pdf', size: '1.9 MB' }
+                  { name: '«Тазалык» МИ 2025-жылдык толук финансылык отчету.pdf', file: '/docs/finansy-otchet-2025.pdf' },
+                  { name: 'Айылдык Кеңештин тарифтер жөнүндө Токтому (№14-2026).pdf', file: '/docs/tarif-toktom-14-2026.pdf' },
+                  { name: 'Жайыт пайдалануучулар бирикмесинин планы жана сметасы.pdf', file: '/docs/jayyt-plan-smeta.pdf' }
                 ].map((doc, idx) => (
                   <div
                     key={idx}
-                    className="p-3 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center justify-between text-xs"
+                    className="p-3 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center justify-between gap-2 text-xs"
                   >
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <FileText className="w-4 h-4 text-emerald-700 shrink-0" />
-                      <div>
-                        <span className="font-medium text-stone-900 block truncate max-w-[280px] sm:max-w-md">
+                      <div className="min-w-0">
+                        <span className="font-medium text-stone-900 block truncate sm:max-w-md">
                           {doc.name}
                         </span>
-                        <span className="text-[10px] text-stone-400 font-mono">{doc.size}</span>
+                        <span className="text-[10px] text-stone-400 font-mono">PDF</span>
                       </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleDownload(doc.name)}
+                      onClick={() => handleDownload(doc.name, doc.file)}
                       className="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-white border border-stone-200 rounded-lg hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
                     >
                       <Download className="w-3.5 h-3.5" />

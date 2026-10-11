@@ -49,7 +49,11 @@ function MainAppContent() {
     serviceType: 'water' | 'waste' | 'pasture' | 'machinery';
     amount: number;
     details: string;
+    orderId?: string;
+    accountId?: string;
+    version: number;
   }>({
+    version: 0,
     serviceType: 'water',
     amount: 240,
     details: 'Таза суу карызын төлөө'
@@ -63,13 +67,19 @@ function MainAppContent() {
   const handleDirectPaymentFromSection = (
     serviceType: 'water' | 'waste' | 'pasture' | 'machinery',
     amount: number,
-    details: string
+    details: string,
+    orderId?: string,
+    accountId?: string
   ) => {
-    setPaymentPreFill({
+    // version өзгөргөндө төлөм формасы жаңы маалымат менен кайра түзүлөт
+    setPaymentPreFill(prev => ({
       serviceType,
       amount,
-      details
-    });
+      details,
+      orderId,
+      accountId,
+      version: prev.version + 1
+    }));
     setActiveTab('payments');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -113,6 +123,9 @@ function MainAppContent() {
               initialServiceType={paymentPreFill.serviceType}
               initialAmount={paymentPreFill.amount}
               initialDetails={paymentPreFill.details}
+              initialOrderId={paymentPreFill.orderId}
+              initialAccountId={paymentPreFill.accountId}
+              key={`pay-${paymentPreFill.version}`}
             />
             {/* Clean Water & Waste Management */}
             <WaterAndWasteSection
@@ -156,6 +169,9 @@ function MainAppContent() {
             initialServiceType={paymentPreFill.serviceType}
             initialAmount={paymentPreFill.amount}
             initialDetails={paymentPreFill.details}
+            initialOrderId={paymentPreFill.orderId}
+            initialAccountId={paymentPreFill.accountId}
+            key={`pay-${paymentPreFill.version}`}
           />
         )}
 

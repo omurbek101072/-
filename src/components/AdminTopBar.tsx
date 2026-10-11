@@ -7,7 +7,7 @@ interface AdminTopBarProps {
 }
 
 export const AdminTopBar: React.FC<AdminTopBarProps> = ({ onOpenAdminPanel }) => {
-  const { isAdminLoggedIn, logoutAdmin, isEditModeActive, setIsEditModeActive } = useApp();
+  const { isAdminLoggedIn, logoutAdmin, isEditModeActive, setIsEditModeActive, isDefaultAdminPin } = useApp();
 
   if (!isAdminLoggedIn) return null;
 
@@ -28,6 +28,17 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({ onOpenAdminPanel }) =>
             Башкаруу панели жана аталыштарды өзгөртүү сизге гана көрүнүүдө
           </span>
         </div>
+
+        {isDefaultAdminPin && (
+          <button
+            type="button"
+            onClick={onOpenAdminPanel}
+            className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-bold cursor-pointer"
+            title="Башкаруу панели → Сайттын мазмуну → Коопсуздук"
+          >
+            ⚠ Баштапкы сырсөздү алмаштырыңыз!
+          </button>
+        )}
 
         <div className="flex items-center gap-2">
           {/* Toggle In-Place Title Editing */}

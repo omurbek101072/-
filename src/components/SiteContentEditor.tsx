@@ -16,9 +16,30 @@ import {
   ShieldCheck,
   Sparkles
 } from 'lucide-react';
+import { MIN_PIN_LENGTH } from '../utils/security';
 
 export const SiteContentEditor: React.FC = () => {
-  const { siteSettings, updateSiteSettings, pastureZones, updatePastureZone } = useApp();
+  const { siteSettings, updateSiteSettings, pastureZones, updatePastureZone, changeAdminPin, isDefaultAdminPin } = useApp();
+  const [pinCurrent, setPinCurrent] = useState('');
+  const [pinNew, setPinNew] = useState('');
+  const [pinConfirm, setPinConfirm] = useState('');
+  const [pinMessage, setPinMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const handleChangePin = async () => {
+    if (pinNew !== pinConfirm) {
+      setPinMessage({ ok: false, text: 'Жаңы сырсөздөр дал келбейт.' });
+      return;
+    }
+    const result = await changeAdminPin(pinCurrent, pinNew);
+    if (result.ok) {
+      setPinMessage({ ok: true, text: 'Сырсөз ийгиликтүү алмаштырылды!' });
+      setPinCurrent('');
+      setPinNew('');
+      setPinConfirm('');
+    } else {
+      setPinMessage({ ok: false, text: result.error || 'Ката кетти.' });
+    }
+  };
   const [formData, setFormData] = useState<SiteSettings>(siteSettings);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [subTab, setSubTab] = useState<'general' | 'hero' | 'sections' | 'contacts' | 'pasture_zones' | 'security'>('general');
@@ -43,7 +64,7 @@ export const SiteContentEditor: React.FC = () => {
 
   const handleResetToDefault = () => {
     if (confirm('Бардык аталыштарды баштапкы абалга келтирүүнү каалайсызбы?')) {
-      setFormData(INITIAL_SITE_SETTINGS);
+      setFormData({ ...INITIAL_SITE_SETTINGS, adminPin: siteSettings.adminPin });
       updateSiteSettings(INITIAL_SITE_SETTINGS);
       setSuccessMessage('Баштапкы аталыштар калыбына келтирилди!');
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -721,19 +742,51 @@ export const SiteContentEditor: React.FC = () => {
               </p>
             </div>
 
-            <div>
-              <label className="block text-stone-700 font-bold mb-1">
-                Жаңы PIN-код же сырсөз:
-              </label>
+            {isDefaultAdminPin && (
+              <div className="p-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-[11px] font-semibold">
+                Азыр баштапкы сырсөз колдонулууда. Аны сөзсүз жаңы сырсөзгө алмаштырыңыз!
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="block text-stone-700 font-bold">Учурдагы сырсөз:</label>
               <input
-                type="text"
-                value={formData.adminPin}
-                onChange={(e) => handleInputChange('adminPin', e.target.value)}
-                placeholder="Сырсөздү жазыңыз..."
-                className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg font-mono font-bold text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                type="password"
+                autoComplete="current-password"
+                value={pinCurrent}
+                onChange={(e) => setPinCurrent(e.target.value)}
+                className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg font-mono text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
               />
-              <p className="text-[11px] text-stone-500 mt-1.5">
-                Учурдагы сырсөз: <span className="font-mono font-bold text-stone-800">{formData.adminPin}</span>.
+              <label className="block text-stone-700 font-bold">Жаңы сырсөз (кеминде {MIN_PIN_LENGTH} белги):</label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={pinNew}
+                onChange={(e) => setPinNew(e.target.value)}
+                className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg font-mono text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+              />
+              <label className="block text-stone-700 font-bold">Жаңы сырсөздү кайталаңыз:</label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={pinConfirm}
+                onChange={(e) => setPinConfirm(e.target.value)}
+                className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg font-mono text-stone-900 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+              />
+              {pinMessage && (
+                <p className={`text-[11px] font-semibold ${pinMessage.ok ? 'text-emerald-700' : 'text-rose-600'}`}>
+                  {pinMessage.text}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={handleChangePin}
+                className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold cursor-pointer"
+              >
+                Сырсөздү алмаштыруу
+              </button>
+              <p className="text-[11px] text-stone-500">
+                Сырсөз шифрленген (хэш) түрүндө сакталат жана эч жерде көрсөтүлбөйт.
                 Бул сырсөздү кызматкерлер гана билиши керек.
               </p>
             </div>

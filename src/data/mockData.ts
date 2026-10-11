@@ -1,3 +1,5 @@
+import { DEFAULT_ADMIN_PIN_HASH } from '../utils/security';
+
 export interface SubscriberAccount {
   id: string; // e.g. "1042"
   fullName: string;
@@ -68,6 +70,7 @@ export interface CitizenTicket {
   assignedCrew?: string;
   date: string;
   resolutionNotes?: string;
+  photo?: string; // кичирейтилген сүрөт (data URL)
 }
 
 export interface SiteSettings {
@@ -114,7 +117,7 @@ export interface SiteSettings {
   inn: string;
   okpo: string;
 
-  // 6. Администратордун сырсөзү
+  // 6. Администратордун сырсөзү (SHA-256 хэш түрүндө сакталат, ачык текст эмес)
   adminPin: string;
 }
 
@@ -157,7 +160,7 @@ export const INITIAL_SITE_SETTINGS: SiteSettings = {
   inn: "01204201010045",
   okpo: "29481023",
 
-  adminPin: "1234"
+  adminPin: (import.meta.env.VITE_ADMIN_PIN_HASH as string | undefined) || DEFAULT_ADMIN_PIN_HASH
 };
 
 export interface TariffConfig {
@@ -354,7 +357,7 @@ export const MACHINERY_CATALOG: MachineryItem[] = [
     year: 2023,
     hourlyRate: 2600,
     shiftRate: 19000,
-    image: "/src/assets/images/tazalyk_machinery_excavator_1791715428773.jpg",
+    image: "/images/tazalyk_machinery_excavator_1791715428773.jpg",
     status: "бош",
     specs: {
       capacity: "0.9 м³ чөмүч, казуу тереңдиги 6.6 м",
@@ -373,7 +376,7 @@ export const MACHINERY_CATALOG: MachineryItem[] = [
     year: 2022,
     hourlyRate: 2100,
     shiftRate: 15500,
-    image: "/src/assets/images/tazalyk_machinery_excavator_1791715428773.jpg",
+    image: "/images/tazalyk_machinery_excavator_1791715428773.jpg",
     status: "бош",
     specs: {
       capacity: "Алдыңкы чөмүч 1.1 м³, арткы 0.3 м³",
@@ -393,7 +396,7 @@ export const MACHINERY_CATALOG: MachineryItem[] = [
     hourlyRate: 1800,
     shiftRate: 13000,
     tripRate: 2500,
-    image: "/src/assets/images/tazalyk_machinery_excavator_1791715428773.jpg",
+    image: "/images/tazalyk_machinery_excavator_1791715428773.jpg",
     status: "иште",
     specs: {
       capacity: "15 тонна / 10.5 м³ чанагы",
@@ -413,7 +416,7 @@ export const MACHINERY_CATALOG: MachineryItem[] = [
     hourlyRate: 800,
     shiftRate: 5500,
     tripRate: 900,
-    image: "/src/assets/images/tazalyk_machinery_excavator_1791715428773.jpg",
+    image: "/images/tazalyk_machinery_excavator_1791715428773.jpg",
     status: "бош",
     specs: {
       capacity: "1.5 тонна борт",
@@ -433,7 +436,7 @@ export const MACHINERY_CATALOG: MachineryItem[] = [
     hourlyRate: 1900,
     shiftRate: 14000,
     tripRate: 1600,
-    image: "/src/assets/images/tazalyk_clean_water_source_1791715441093.jpg",
+    image: "/images/tazalyk_clean_water_source_1791715441093.jpg",
     status: "бош",
     specs: {
       capacity: "Цистерна 4.0 м³, шланга 15 метр",
@@ -453,7 +456,7 @@ export const MACHINERY_CATALOG: MachineryItem[] = [
     hourlyRate: 1500,
     shiftRate: 11000,
     tripRate: 1700,
-    image: "/src/assets/images/tazalyk_clean_water_source_1791715441093.jpg",
+    image: "/images/tazalyk_clean_water_source_1791715441093.jpg",
     status: "бош",
     specs: {
       capacity: "Тамак-аш цистернасы 6.0 м³",

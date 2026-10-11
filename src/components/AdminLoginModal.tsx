@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Lock, Shield, KeyRound, X, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Lock, Shield, KeyRound, X, AlertCircle } from 'lucide-react';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -9,28 +9,32 @@ interface AdminLoginModalProps {
 }
 
 export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose, onSuccess }) => {
-  const { loginAdmin, siteSettings } = useApp();
+  const { loginAdmin } = useApp();
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (loginAdmin(pin)) {
-      setError(null);
-      setPin('');
-      onSuccess();
-    } else {
-      setError('Сырсөз туура эмес! Кайра текшерип жазыңыз.');
-    }
+  const handleClose = () => {
+    setPin('');
+    setError(null);
+    onClose();
   };
 
-  const handleQuickDemoLogin = () => {
-    loginAdmin(siteSettings.adminPin);
-    setError(null);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isChecking) return;
+    setIsChecking(true);
+    const result = await loginAdmin(pin);
+    setIsChecking(false);
     setPin('');
-    onSuccess();
+    if (result.ok) {
+      setError(null);
+      onSuccess();
+    } else {
+      setError(result.error || 'Сырсөз туура эмес! Кайра текшерип жазыңыз.');
+    }
   };
 
   return (
@@ -47,7 +51,9 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
             </div>
           </div>
           <button
-            onClick={onClose}
+            type="button"
+            onClick={handleClose}
+            aria-label="Жабуу"
             className="p-1 rounded text-stone-400 hover:text-stone-700"
           >
             <X className="w-4 h-4" />
@@ -63,6 +69,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
               <KeyRound className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="password"
+                autoComplete="current-password"
                 required
                 autoFocus
                 value={pin}
@@ -86,19 +93,13 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
           <div className="pt-2 flex flex-col gap-2">
             <button
               type="submit"
-              className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-2"
+              disabled={isChecking}
+              className="w-full disabled:opacity-60 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-2"
             >
               <Lock className="w-3.5 h-3.5" />
               <span>Башкаруу панелине кирүү</span>
             </button>
 
-            <button
-              type="button"
-              onClick={handleQuickDemoLogin}
-              className="w-full py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
-            >
-              Ыкчам кирүү (PIN: {siteSettings.adminPin})
-            </button>
           </div>
         </form>
       </div>

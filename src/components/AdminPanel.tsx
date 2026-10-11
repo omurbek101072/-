@@ -36,6 +36,7 @@ import {
   DollarSign,
   Droplets
 } from 'lucide-react';
+import { generateId, nowTimestamp } from '../utils/ids';
 import { ReceiptModal } from './ReceiptModal';
 import { SiteContentEditor } from './SiteContentEditor';
 
@@ -99,7 +100,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     if (cashierService === 'water') {
       setCashierAmount(Math.abs(Math.min(0, sub.waterBalance)) || 200);
     } else if (cashierService === 'waste') {
-      setCashierAmount(Math.abs(Math.min(0, sub.wasteBalance)) || sub.wasteFamilyMembers * 35);
+      setCashierAmount(Math.abs(Math.min(0, sub.wasteBalance)) || sub.wasteFamilyMembers * sub.wasteTariffPerPerson);
     } else if (cashierService === 'pasture') {
       setCashierAmount(Math.abs(Math.min(0, sub.pastureBalance)) || 500);
     }
@@ -107,7 +108,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
 
   const handleExecuteCashierPayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (cashierAmount <= 0) return;
+    if (!(cashierAmount >= 1)) return;
 
     let sName = 'Таза суу акысы';
     if (cashierService === 'waste') sName = 'Катуу тиричилик калдыктары';
@@ -115,15 +116,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     if (cashierService === 'machinery') sName = 'Атайын техника ижара акысы';
 
     const newTx: PaymentTransaction = {
-      id: `tx-${Date.now().toString().slice(-6)}`,
-      receiptNumber: `TZL-ADM-${Math.floor(10000 + Math.random() * 90000)}`,
-      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      id: `tx-${Date.now()}`,
+      receiptNumber: generateId('TZL-K', transactions.map(t => t.receiptNumber)),
+      timestamp: nowTimestamp(),
       payerName: cashierPayerName,
       payerPhone: cashierPhone,
       accountId: cashierAccountId,
       serviceType: cashierService,
       serviceName: sName,
-      amount: Number(cashierAmount),
+      amount: Math.round(Number(cashierAmount)),
       paymentMethod: cashierMethod as any,
       status: 'Төлөндү',
       details: cashierDetails
@@ -903,6 +904,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
 
                       <h4 className="text-sm font-bold text-stone-900">{ticket.category}</h4>
                       <p className="text-xs text-stone-600">{ticket.description}</p>
+                      {ticket.photo && (
+                        <img src={ticket.photo} alt="Арызга тиркелген сүрөт" className="w-40 max-w-full rounded-lg border border-stone-200" />
+                      )}
 
                       <div className="flex flex-wrap items-center gap-4 text-xs text-stone-500 pt-1">
                         <span className="flex items-center gap-1">
@@ -911,7 +915,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                         </span>
                         <span className="flex items-center gap-1 font-mono">
                           <Phone className="w-3.5 h-3.5 text-stone-400" />
-                          {ticket.phone}
+                          <a href={`tel:${ticket.phone.replace(/[^\d+]/g, '')}`} className="hover:underline">{ticket.phone}</a>
                         </span>
                         <span className="flex items-center gap-1">
                           <MapPin className="w-3.5 h-3.5 text-stone-400" />

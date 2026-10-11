@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { MachineryItem, MachineryOrder } from '../types';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
+import { generateId, nowTimestamp } from '../utils/ids';
+import { isValidKgPhone, PHONE_ERROR, todayIso } from '../utils/validation';
 import { Truck, Clock, Fuel, ShieldCheck, CheckCircle2, Calendar, Phone, ArrowRight, UserCheck, AlertCircle, X } from 'lucide-react';
 
 interface MachineryFleetSectionProps {
-  onDirectPayment: (serviceType: 'machinery', amount: number, details: string) => void;
+  onDirectPayment: (serviceType: 'machinery', amount: number, details: string, orderId?: string) => void;
 }
 
 export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ onDirectPayment }) => {
-  const { machineryCatalog, addMachineryOrder } = useApp();
+  const { machineryCatalog, machineryOrders, addMachineryOrder } = useApp();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [bookingItem, setBookingItem] = useState<MachineryItem | null>(null);
   
@@ -18,13 +20,14 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
   const [hoursCount, setHoursCount] = useState<number>(3);
   const [shiftsCount, setShiftsCount] = useState<number>(1);
   const [tripsCount, setTripsCount] = useState<number>(1);
-  const [bookingDate, setBookingDate] = useState<string>('2026-10-14');
+  const [bookingDate, setBookingDate] = useState<string>(todayIso(1));
   const [customerName, setCustomerName] = useState<string>('');
   const [customerPhone, setCustomerPhone] = useState<string>('+996 ');
   const [workAddress, setWorkAddress] = useState<string>('');
   const [workDescription, setWorkDescription] = useState<string>('Арык казуу жана жер түздөө');
   
   const [bookingNotice, setBookingNotice] = useState<string | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   // Filter machines
   const filteredMachines = selectedCategory === 'all'
@@ -43,6 +46,9 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
 
   const handleOpenBooking = (item: MachineryItem) => {
     setBookingItem(item);
+    setBookingError(null);
+    // Минималдуу заказ саатынан аз болбосун
+    setHoursCount(prev => Math.max(item.specs.minOrderHours, prev));
     if (item.tripRate && item.category === 'special') {
       setOrderType('trips');
     } else {
@@ -50,63 +56,60 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
     }
   };
 
+  // Форманы текшерүү (катасы болсо - ката текстин кайтарат)
+  const validateBooking = (): string | null => {
+    if (!isValidKgPhone(customerPhone)) return PHONE_ERROR;
+    if (!workAddress.trim()) return 'Иштин дарегин жазыңыз.';
+    if (!bookingDate || bookingDate < todayIso()) return 'Күндү туура тандаңыз (бүгүн же андан кийин).';
+    return null;
+  };
+
+  const buildOrder = (item: MachineryItem): MachineryOrder => ({
+    id: generateId('ORD', machineryOrders.map(o => o.id)),
+    machineId: item.id,
+    machineName: item.name,
+    customerName: customerName.trim() || 'Айыл тургуну',
+    customerPhone: customerPhone.trim(),
+    address: workAddress.trim(),
+    workDescription,
+    orderDate: bookingDate,
+    orderType,
+    units: orderType === 'hours' ? hoursCount : orderType === 'shift' ? shiftsCount : tripsCount,
+    totalEstimate: calculateEstimate(item),
+    status: 'жаңы',
+    // Төлөм чындап өткөндө гана "төлөндү" болот (OnlinePaymentHub)
+    paymentStatus: 'күтүлүүдө',
+    createdAt: nowTimestamp()
+  });
+
   const handleSubmitBooking = (e: React.FormEvent) => {
     e.preventDefault();
     if (!bookingItem) return;
+    const err = validateBooking();
+    if (err) {
+      setBookingError(err);
+      return;
+    }
 
-    const estimate = calculateEstimate(bookingItem);
-    const orderId = `ORD-${Math.floor(100 + Math.random() * 900)}`;
-    const newOrder: MachineryOrder = {
-      id: orderId,
-      machineId: bookingItem.id,
-      machineName: bookingItem.name,
-      customerName: customerName || 'Айыл тургуну',
-      customerPhone,
-      address: workAddress || 'Айыл ичи',
-      workDescription,
-      orderDate: bookingDate,
-      orderType,
-      units: orderType === 'hours' ? hoursCount : orderType === 'shift' ? shiftsCount : tripsCount,
-      totalEstimate: estimate,
-      status: 'жаңы',
-      paymentStatus: 'күтүлүүдө',
-      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
-    };
-
+    const newOrder = buildOrder(bookingItem);
     addMachineryOrder(newOrder);
-    setBookingNotice(`Өтүнмө № ${orderId} кабыл алынды! Башкаруу панелине жиберилди. Диспетчер чалат.`);
-    
-    // Close modal after 1.5s
-    setTimeout(() => {
-      setBookingItem(null);
-    }, 1500);
+    setBookingNotice(`Өтүнмө № ${newOrder.id} кабыл алынды! Диспетчер сиз менен байланышат.`);
+    setBookingItem(null);
   };
 
   const handlePayNow = () => {
     if (!bookingItem) return;
-    const estimate = calculateEstimate(bookingItem);
-    const orderId = `ORD-${Math.floor(100 + Math.random() * 900)}`;
-    const newOrder: MachineryOrder = {
-      id: orderId,
-      machineId: bookingItem.id,
-      machineName: bookingItem.name,
-      customerName: customerName || 'Айыл тургуну',
-      customerPhone,
-      address: workAddress || 'Айыл ичи',
-      workDescription,
-      orderDate: bookingDate,
-      orderType,
-      units: orderType === 'hours' ? hoursCount : orderType === 'shift' ? shiftsCount : tripsCount,
-      totalEstimate: estimate,
-      status: 'кабыл алынды',
-      paymentStatus: 'төлөндү',
-      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
-    };
+    const err = validateBooking();
+    if (err) {
+      setBookingError(err);
+      return;
+    }
+    const newOrder = buildOrder(bookingItem);
     addMachineryOrder(newOrder);
 
-    const orderDetails = `${bookingItem.name} (${bookingItem.model}) ижарасы: ${orderType === 'hours' ? `${hoursCount} саат` : orderType === 'shift' ? `${shiftsCount} смена` : `${tripsCount} рейс`}`;
+    const orderDetails = `Заказ № ${newOrder.id}: ${bookingItem.name} (${bookingItem.model}) ижарасы, ${orderType === 'hours' ? `${hoursCount} саат` : orderType === 'shift' ? `${shiftsCount} смена` : `${tripsCount} рейс`}`;
     setBookingItem(null);
-    onDirectPayment('machinery', estimate, orderDetails);
+    onDirectPayment('machinery', newOrder.totalEstimate, orderDetails, newOrder.id);
   };
 
   return (
@@ -401,6 +404,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                   <label className="block text-stone-700 font-semibold mb-1">Күнү:</label>
                   <input
                     type="date"
+                    min={todayIso()}
                     value={bookingDate}
                     onChange={(e) => setBookingDate(e.target.value)}
                     className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs"
@@ -409,7 +413,8 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                 <div>
                   <label className="block text-stone-700 font-semibold mb-1">Телефон номери:</label>
                   <input
-                    type="text"
+                    type="tel"
+                    inputMode="tel"
                     required
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(e.target.value)}
@@ -441,6 +446,10 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                   className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs"
                 />
               </div>
+
+              {bookingError && (
+                <p className="text-[11px] font-semibold text-rose-600">{bookingError}</p>
+              )}
 
               {/* Estimate & Buttons */}
               <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200/90 flex items-center justify-between">

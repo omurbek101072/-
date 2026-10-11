@@ -2,6 +2,7 @@ import React from 'react';
 import { Phone, MapPin, Clock, Lock, ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
+import { PhoneLink } from './PhoneLink';
 
 interface FooterProps {
   onNavClick: (tab: string) => void;
@@ -99,7 +100,7 @@ export const Footer: React.FC<FooterProps> = ({
                 <span>
                   Авариялык диспетчер:{' '}
                   <strong className="text-white font-mono">
-                    <EditableText settingKey="dispatcherPhone" label="Диспетчердик телефон" />
+                    <PhoneLink phone={siteSettings.dispatcherPhone}><EditableText settingKey="dispatcherPhone" label="Диспетчердик телефон" /></PhoneLink>
                   </strong>
                 </span>
               </div>
@@ -108,7 +109,7 @@ export const Footer: React.FC<FooterProps> = ({
                 <span>
                   WhatsApp:{' '}
                   <strong className="text-white font-mono">
-                    <EditableText settingKey="whatsappPhone" label="WhatsApp номери" />
+                    <PhoneLink phone={siteSettings.whatsappPhone} kind="whatsapp"><EditableText settingKey="whatsappPhone" label="WhatsApp номери" /></PhoneLink>
                   </strong>
                 </span>
               </div>

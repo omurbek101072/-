@@ -2,6 +2,7 @@ import React from 'react';
 import { Phone, CreditCard, AlertTriangle, Menu, X, ShieldCheck, Settings } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
+import { PhoneLink } from './PhoneLink';
 
 interface HeaderProps {
   activeTab: string;
@@ -57,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span>
                 Диспетчер:{' '}
                 <strong className="text-white font-mono">
-                  <EditableText settingKey="dispatcherPhone" label="Диспетчер телефон" />
+                  <PhoneLink phone={siteSettings.dispatcherPhone}><EditableText settingKey="dispatcherPhone" label="Диспетчер телефон" /></PhoneLink>
                 </strong>
               </span>
             </div>

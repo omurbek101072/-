@@ -1,13 +1,16 @@
 import React from 'react';
 import { PaymentTransaction } from '../types';
+import { useApp } from '../context/AppContext';
 import { CheckCircle2, Printer, X, Download, ShieldCheck, QrCode } from 'lucide-react';
 
 interface ReceiptModalProps {
   transaction: PaymentTransaction;
   onClose: () => void;
+  isDemo?: boolean;
 }
 
-export const ReceiptModal: React.FC<ReceiptModalProps> = ({ transaction, onClose }) => {
+export const ReceiptModal: React.FC<ReceiptModalProps> = ({ transaction, onClose, isDemo }) => {
+  const { siteSettings } = useApp();
   const handlePrint = () => {
     window.print();
   };
@@ -27,6 +30,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ transaction, onClose
             </div>
           </div>
           <button
+            type="button"
+            aria-label="Жабуу"
             onClick={onClose}
             className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
             title="Жабуу"
@@ -40,7 +45,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({ transaction, onClose
           <div className="text-center border-b border-dashed border-stone-300 pb-4">
             <span className="text-[11px] font-semibold tracking-wider text-emerald-800 uppercase block">Кыргыз Республикасы · Айыл өкмөтү</span>
             <h2 className="text-lg font-extrabold text-stone-900 mt-0.5">«ТАЗАЛЫК» МУНИЦИПАЛДЫК ИШКАНАСЫ</h2>
-            <p className="text-xs text-stone-500 mt-0.5">ИНН: 01204201010045 · ОКПО: 29481023</p>
+            <p className="text-xs text-stone-500 mt-0.5">ИНН: {siteSettings.inn} · ОКПО: {siteSettings.okpo}</p>
+            {isDemo && (
+              <p className="mt-2 text-[11px] font-bold text-rose-600 uppercase">
+                Демо квитанция: чыныгы төлөм эмес
+              </p>
+            )}
             <div className="inline-block mt-2 px-3 py-1 bg-stone-100 rounded-md text-xs font-mono font-medium text-stone-700">
               Квитанция № {transaction.receiptNumber}
             </div>

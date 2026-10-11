@@ -2,6 +2,32 @@ import React, { useState } from 'react';
 import { X, Send, AlertTriangle, CheckCircle2, Camera, Phone, MapPin, Search } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { CitizenTicket } from '../types';
+import { generateId, nowTimestamp } from '../utils/ids';
+import { isValidKgPhone, PHONE_ERROR } from '../utils/validation';
+
+// Сүрөттү кичирейтип (макс. 1024px, JPEG) data URL кылуу — браузердин сактагычына батышы үчүн
+function compressImage(file: File, maxSize = 1024, quality = 0.7): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('read'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('image'));
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('canvas'));
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 interface CitizenRequestModalProps {
   isOpen: boolean;
@@ -18,51 +44,89 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
   const [phone, setPhone] = useState<string>('+996 ');
   const [address, setAddress] = useState<string>('');
   const [description, setDescription] = useState<string>('');
-  const [hasPhoto, setHasPhoto] = useState<boolean>(false);
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [createdTicket, setCreatedTicket] = useState<CitizenTicket | null>(null);
 
   // Check status fields
-  const [checkId, setCheckId] = useState<string>('ТЗЛ-804');
-  const [foundTicket, setFoundTicket] = useState<CitizenTicket | null>(citizenTickets[0] || null);
+  const [checkId, setCheckId] = useState<string>('');
+  const [foundTicket, setFoundTicket] = useState<CitizenTicket | null>(null);
+  const [ticketNotFound, setTicketNotFound] = useState(false);
 
   if (!isOpen) return null;
 
+  const resetForm = () => {
+    setCategory('Суу түтүгү жарылды / Суу жок');
+    setName('');
+    setPhone('+996 ');
+    setAddress('');
+    setDescription('');
+    setPhoto(null);
+    setPhotoError(null);
+    setFormError(null);
+  };
+
+  const handleClose = () => {
+    if (createdTicket) {
+      setCreatedTicket(null);
+      resetForm();
+    }
+    onClose();
+  };
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('Сүрөт файлын гана тандаңыз.');
+      return;
+    }
+    try {
+      setPhoto(await compressImage(file));
+      setPhotoError(null);
+    } catch {
+      setPhotoError('Сүрөттү жүктөөдө ката кетти. Башка сүрөт тандаңыз.');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const newId = `ТЗЛ-${Math.floor(100 + Math.random() * 900)}`;
+    if (!isValidKgPhone(phone)) {
+      setFormError(PHONE_ERROR);
+      return;
+    }
+    if (!address.trim() || !description.trim()) {
+      setFormError('Дарек жана баяндама талааларын толтуруңуз.');
+      return;
+    }
+    setFormError(null);
     const newTicket: CitizenTicket = {
-      id: newId,
+      id: generateId('ТЗЛ', citizenTickets.map(t => t.id)),
       category,
-      name: name || 'Айыл тургуну',
-      phone,
-      address,
-      description,
+      name: name.trim() || 'Айыл тургуну',
+      phone: phone.trim(),
+      address: address.trim(),
+      description: description.trim(),
       status: 'Кабыл алынды',
-      date: new Date().toISOString().replace('T', ' ').slice(0, 16)
+      date: nowTimestamp(),
+      ...(photo ? { photo } : {})
     };
     addCitizenTicket(newTicket);
     setCreatedTicket(newTicket);
+    resetForm();
   };
 
   const handleSearchTicket = (e: React.FormEvent) => {
     e.preventDefault();
     const q = checkId.trim().toUpperCase();
     if (q) {
-      const match = citizenTickets.find(t => t.id.toUpperCase() === q);
-      if (match) {
-        setFoundTicket(match);
-      } else {
-        setFoundTicket({
-          id: q,
-          category: 'Кайрылуу',
-          name: 'Тургун',
-          phone: '+996 (702) **-**-**',
-          address: 'Айыл аймагы',
-          description: 'Арыз кароодо турат',
-          status: 'Кароодо',
-          date: new Date().toISOString().replace('T', ' ').slice(0, 16)
-        });
-      }
+      const cleaned = q.replace(/^№\s*/, '');
+      const match = citizenTickets.find(t => t.id.toUpperCase() === cleaned);
+      // Жок арыз үчүн жасалма жыйынтык көрсөтпөйбүз
+      setFoundTicket(match || null);
+      setTicketNotFound(!match);
     }
   };
 
@@ -83,7 +147,9 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
             </h3>
           </div>
           <button
-            onClick={onClose}
+            type="button"
+            aria-label="Жабуу"
+            onClick={handleClose}
             className="p-1.5 rounded-lg text-stone-300 hover:text-white hover:bg-white/10 transition-colors"
           >
             <X className="w-5 h-5" />
@@ -93,6 +159,7 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
         {/* Tab switchers */}
         <div className="flex border-b border-stone-200 text-xs font-semibold bg-stone-50">
           <button
+            type="button"
             onClick={() => { setActiveTab('create'); setCreatedTicket(null); }}
             className={`flex-1 py-3 text-center transition-colors cursor-pointer ${
               activeTab === 'create'
@@ -103,6 +170,7 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
             Жаңы арыз жөнөтүү
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('check')}
             className={`flex-1 py-3 text-center transition-colors cursor-pointer ${
               activeTab === 'check'
@@ -140,7 +208,8 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
                   </div>
                 </div>
                 <button
-                  onClick={onClose}
+                  type="button"
+                  onClick={handleClose}
                   className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
                 >
                   Түшүнүктүү, жабуу
@@ -181,7 +250,8 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
                   <div>
                     <label className="block text-stone-700 font-semibold mb-1">Телефон номери:</label>
                     <input
-                      type="text"
+                      type="tel"
+                      inputMode="tel"
                       required
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
@@ -215,22 +285,36 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
                   />
                 </div>
 
-                {/* Photo attachment toggle */}
-                <div className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-stone-200">
-                  <div className="flex items-center gap-2">
-                    <Camera className="w-4 h-4 text-stone-500" />
-                    <span className="text-stone-700">Сүрөт тиркөө (бузулган жери)</span>
+                {/* Сүрөт тиркөө (чыныгы файл) */}
+                <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-stone-500" />
+                      <span className="text-stone-700">Сүрөт тиркөө (милдеттүү эмес)</span>
+                    </div>
+                    <label className="px-2.5 py-1 rounded text-[11px] font-semibold cursor-pointer bg-stone-200 text-stone-700 hover:bg-stone-300">
+                      {photo ? 'Башка сүрөт' : '+ Сүрөт жүктөө'}
+                      <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                    </label>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setHasPhoto(!hasPhoto)}
-                    className={`px-2.5 py-1 rounded text-[11px] font-semibold cursor-pointer ${
-                      hasPhoto ? 'bg-emerald-700 text-white' : 'bg-stone-200 text-stone-700'
-                    }`}
-                  >
-                    {hasPhoto ? 'Сүрөт тиркелди (1)' : '+ Сүрөт жүктөө'}
-                  </button>
+                  {photo && (
+                    <div className="flex items-center gap-2">
+                      <img src={photo} alt="Тиркелген сүрөт" className="w-16 h-16 object-cover rounded-lg border border-stone-200" />
+                      <button
+                        type="button"
+                        onClick={() => setPhoto(null)}
+                        className="text-[11px] font-semibold text-rose-600 hover:underline cursor-pointer"
+                      >
+                        Алып салуу
+                      </button>
+                    </div>
+                  )}
+                  {photoError && <p className="text-[11px] text-rose-600 font-semibold">{photoError}</p>}
                 </div>
+
+                {formError && (
+                  <p className="text-[11px] text-rose-600 font-semibold">{formError}</p>
+                )}
 
                 <div className="pt-2">
                   <button
@@ -250,7 +334,7 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
                   type="text"
                   value={checkId}
                   onChange={(e) => setCheckId(e.target.value)}
-                  placeholder="Арыз номери (Мисалы: ТЗЛ-804)..."
+                  placeholder="Арыз номери (мисалы: ТЗЛ-261011-4821)..."
                   className="flex-1 px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-mono"
                 />
                 <button
@@ -260,6 +344,12 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
                   Текшерүү
                 </button>
               </form>
+
+              {ticketNotFound && (
+                <div className="p-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 font-semibold">
+                  Мындай номердеги арыз табылган жок. Номерди текшерип кайра жазыңыз же диспетчерге чалыңыз.
+                </div>
+              )}
 
               {foundTicket && (
                 <div className="p-4 rounded-xl border border-stone-200 bg-stone-50 space-y-3">
@@ -282,7 +372,10 @@ export const CitizenRequestModal: React.FC<CitizenRequestModalProps> = ({ isOpen
                     <div><strong>Баяндама:</strong> {foundTicket.description}</div>
                   </div>
                   <div className="text-[11px] text-stone-400 border-t border-stone-200 pt-2">
-                    Жооптуу бригада: Тез чара көрүү тобу №2 (мастер: А. Ибраимов)
+                    Жооптуу бригада: {foundTicket.assignedCrew || 'азырынча дайындала элек'}
+                    {foundTicket.resolutionNotes && (
+                      <div className="mt-1 text-stone-600">Жыйынтык: {foundTicket.resolutionNotes}</div>
+                    )}
                   </div>
                 </div>
               )}

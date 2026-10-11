@@ -4,26 +4,42 @@ import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
 import { Search, CreditCard, CheckCircle2, QrCode, Smartphone, Building, RefreshCw, AlertCircle, ArrowRight, UserCheck, ShieldCheck, History } from 'lucide-react';
 import { ReceiptModal } from './ReceiptModal';
+import { generateId, nowTimestamp } from '../utils/ids';
+import { maskName, maskPhone, maskAddress } from '../utils/privacy';
+
+// Төлөм тутуму (MBank, Optima ж.б.) азырынча туташтырыла элек.
+// Чыныгы төлөм шлюзу кошулганда бул желекти false кылыңыз.
+const PAYMENTS_DEMO_MODE = true;
 
 interface OnlinePaymentHubProps {
   initialServiceType?: 'water' | 'waste' | 'pasture' | 'machinery';
   initialAmount?: number;
   initialDetails?: string;
+  initialOrderId?: string;
+  initialAccountId?: string;
 }
 
 export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
   initialServiceType,
   initialAmount,
-  initialDetails
+  initialDetails,
+  initialOrderId,
+  initialAccountId
 }) => {
-  const { subscribers, transactions, addPayment } = useApp();
+  const { subscribers, transactions, addPayment, isAdminLoggedIn, updateMachineryOrder } = useApp();
 
-  const [searchQuery, setSearchQuery] = useState('1042');
-  const [selectedSubscriber, setSelectedSubscriber] = useState<SubscriberAccount | null>(subscribers[0] || null);
+  const [searchQuery, setSearchQuery] = useState(initialAccountId || '');
+  const [searchNotFound, setSearchNotFound] = useState(false);
+  // Абоненттин көчүрмөсүн эмес, ID'син сактайбыз: төлөмдөн кийин баланс дароо жаңырат
+  const [selectedSubscriberId, setSelectedSubscriberId] = useState<string | null>(initialAccountId || null);
+  const selectedSubscriber: SubscriberAccount | null =
+    subscribers.find(s => s.id === selectedSubscriberId) || null;
   const [serviceType, setServiceType] = useState<'water' | 'waste' | 'pasture' | 'machinery'>(initialServiceType || 'water');
   const [customAmount, setCustomAmount] = useState<number>(initialAmount || 240);
-  const [customPayerName, setCustomPayerName] = useState(subscribers[0]?.fullName || '');
-  const [customPayerPhone, setCustomPayerPhone] = useState(subscribers[0]?.phone || '+996 ');
+  const [pendingOrderId, setPendingOrderId] = useState<string | undefined>(initialOrderId);
+  const [customPayerName, setCustomPayerName] = useState('');
+  const [customPayerPhone, setCustomPayerPhone] = useState('+996 ');
+  const [amountError, setAmountError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'MBank' | 'Optima24' | 'O!Dengi' | 'Balance.kg' | 'Элсом' | 'Банк картасы'>('MBank');
   const [paymentDetails, setPaymentDetails] = useState<string>(initialDetails || 'Таза суу карызын төлөө');
   
@@ -34,19 +50,26 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
   // Search for subscriber account
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const query = searchQuery.trim().toLowerCase();
+    const query = searchQuery.trim().toLowerCase().replace(/^№/, '');
     if (!query) return;
 
+    // Жеке маалыматты коргоо: эл үчүн так эсеп номери боюнча гана издөө.
+    // Аты-жөнү же дареги боюнча издөө администраторго гана жеткиликтүү.
     const found = subscribers.find(
-      s => s.id.toLowerCase() === query || 
-           s.fullName.toLowerCase().includes(query) ||
-           s.address.toLowerCase().includes(query)
+      s => s.id.toLowerCase() === query ||
+           (isAdminLoggedIn && (
+             s.fullName.toLowerCase().includes(query) ||
+             s.address.toLowerCase().includes(query)
+           ))
     );
 
     if (found) {
-      setSelectedSubscriber(found);
-      setCustomPayerName(found.fullName);
-      setCustomPayerPhone(found.phone);
+      setSearchNotFound(false);
+      setSelectedSubscriberId(found.id);
+      if (isAdminLoggedIn) {
+        setCustomPayerName(found.fullName);
+        setCustomPayerPhone(found.phone);
+      }
       // Auto-set amount based on service debt
       if (serviceType === 'water') {
         const debt = Math.abs(Math.min(0, found.waterBalance));
@@ -62,8 +85,15 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
         setPaymentDetails(`Жайыт пайдалануу акысы`);
       }
     } else {
-      setSelectedSubscriber(null);
+      setSelectedSubscriberId(null);
+      setSearchNotFound(true);
     }
+  };
+
+  const handleClearSubscriber = () => {
+    setSelectedSubscriberId(null);
+    setSearchQuery('');
+    setSearchNotFound(false);
   };
 
   // Change service type
@@ -73,30 +103,43 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
       if (type === 'water') {
         const amt = Math.abs(Math.min(0, selectedSubscriber.waterBalance));
         setCustomAmount(amt > 0 ? amt : 250);
-        setPaymentDetails(`Таза суу акысы (${selectedSubscriber.address})`);
+        setPaymentDetails(`Таза суу акысы (Лицевой эсеп: ${selectedSubscriber.id})`);
       } else if (type === 'waste') {
         const amt = Math.abs(Math.min(0, selectedSubscriber.wasteBalance));
-        setCustomAmount(amt > 0 ? amt : selectedSubscriber.wasteFamilyMembers * 35);
+        setCustomAmount(amt > 0 ? amt : selectedSubscriber.wasteFamilyMembers * selectedSubscriber.wasteTariffPerPerson);
         setPaymentDetails(`Таштанды акысы (${selectedSubscriber.wasteFamilyMembers} киши)`);
       } else if (type === 'pasture') {
         const amt = Math.abs(Math.min(0, selectedSubscriber.pastureBalance));
         setCustomAmount(amt > 0 ? amt : 750);
         setPaymentDetails(`Жайыт комитетине төлөм`);
-      } else {
-        setCustomAmount(1800);
-        setPaymentDetails(`Атайын техниканы ижарага алуу үчүн алдын ала төлөм`);
       }
+    }
+    if (type === 'machinery' && !pendingOrderId) {
+      setCustomAmount(1800);
+      setPaymentDetails(`Атайын техниканы ижарага алуу үчүн алдын ала төлөм`);
     }
   };
 
   // Execute payment simulation
   const handleExecutePayment = () => {
-    if (customAmount <= 0) return;
+    const amount = Math.round(Number(customAmount));
+    if (!Number.isFinite(amount) || amount < 10) {
+      setAmountError('Төлөм суммасы кеминде 10 сом болушу керек.');
+      return;
+    }
+    if (amount > 1_000_000) {
+      setAmountError('Сумма өтө чоң. Текшерип кайра жазыңыз.');
+      return;
+    }
+    setAmountError(null);
     setIsProcessing(true);
 
-    const payerName = selectedSubscriber?.fullName || customPayerName || 'Айыл тургуну';
-    const payerPhone = selectedSubscriber?.phone || customPayerPhone || '+996 (700) 00-00-00';
-    const accountId = selectedSubscriber?.id || 'МУН-9901';
+    const payerName = customPayerName.trim() || selectedSubscriber?.fullName || 'Айыл тургуну';
+    const payerPhone = customPayerPhone.trim().length > 5 ? customPayerPhone.trim() : (selectedSubscriber?.phone || '-');
+    // Техника ижарасы абоненттин коммуналдык балансына кошулбайт
+    const accountId = serviceType === 'machinery'
+      ? (pendingOrderId || 'ТЕХНИКА')
+      : (selectedSubscriber?.id || 'ЭСЕПСИЗ');
 
     let sName = 'Таза суу акысы';
     if (serviceType === 'waste') sName = 'Катуу тиричилик калдыктары';
@@ -105,21 +148,26 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
 
     setTimeout(() => {
       const newTx: PaymentTransaction = {
-        id: `tx-${Date.now().toString().slice(-6)}`,
-        receiptNumber: `TZL-2026-${Math.floor(10000 + Math.random() * 90000)}`,
-        timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        id: `tx-${Date.now()}`,
+        receiptNumber: generateId('TZL', transactions.map(t => t.receiptNumber)),
+        timestamp: nowTimestamp(),
         payerName,
         payerPhone,
         accountId,
         serviceType,
         serviceName: sName,
-        amount: Number(customAmount),
+        amount,
         paymentMethod,
         status: 'Төлөндү',
         details: paymentDetails
       };
 
       addPayment(newTx);
+      // Техника заказы төлөм чындап өткөндөн кийин гана "төлөндү" болот
+      if (serviceType === 'machinery' && pendingOrderId) {
+        updateMachineryOrder(pendingOrderId, { paymentStatus: 'төлөндү', status: 'кабыл алынды' });
+        setPendingOrderId(undefined);
+      }
       setActiveReceipt(newTx);
       setIsProcessing(false);
       setPaymentSuccessNotice(`Төлөм ийгиликтүү өттү! Квитанция № ${newTx.receiptNumber}`);
@@ -144,6 +192,16 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
           </p>
         </div>
 
+        {PAYMENTS_DEMO_MODE && (
+          <div className="mb-6 p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-semibold flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              Демо режим: онлайн төлөм азырынча банкка туташтырыла элек, чыныгы акча которулбайт.
+              Төлөө үчүн ишкананын кассасына же банк реквизиттери аркылуу кайрылыңыз.
+            </span>
+          </div>
+        )}
+
         {paymentSuccessNotice && (
           <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -165,8 +223,8 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
             {/* Search Box */}
             <div className="bg-white rounded-2xl p-5 border border-stone-200/90 shadow-sm">
               <h3 className="text-sm font-bold text-stone-900 mb-3 flex items-center justify-between">
-                <span>1. Лицевой эсеп же фамилия боюнча издөө</span>
-                <span className="text-[11px] text-stone-400 font-normal">Мисал: 1042, 1043</span>
+                <span>1. Лицевой эсеп номери боюнча издөө</span>
+                <span className="text-[11px] text-stone-400 font-normal">Квитанциядагы номер</span>
               </h3>
               
               <form onSubmit={handleSearch} className="flex gap-2">
@@ -176,7 +234,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Эсеп номери же фамилия..."
+                    placeholder={isAdminLoggedIn ? 'Эсеп номери, фамилия же дарек...' : 'Эсеп номери (мисалы: 1042)...'}
                     className="w-full pl-9 pr-3 py-2 text-sm bg-stone-50 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white"
                   />
                 </div>
@@ -189,15 +247,24 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
               </form>
 
               {/* Sample Quick Account Selectors */}
+              {searchNotFound && (
+                <p className="mt-2 text-[11px] text-rose-600 font-semibold">
+                  Мындай эсеп номери табылган жок. Квитанциядагы номерди текшериңиз.
+                </p>
+              )}
+
+              {/* Абоненттердин тизмеси администраторго гана көрүнөт */}
+              {isAdminLoggedIn && (
               <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
-                <span className="text-stone-400 text-[11px]">Даяр эсептер:</span>
+                <span className="text-stone-400 text-[11px]">Абоненттер (админ):</span>
                 {subscribers.map(s => (
                   <button
                     key={s.id}
                     type="button"
                     onClick={() => {
                       setSearchQuery(s.id);
-                      setSelectedSubscriber(s);
+                      setSearchNotFound(false);
+                      setSelectedSubscriberId(s.id);
                       setCustomPayerName(s.fullName);
                       setCustomPayerPhone(s.phone);
                     }}
@@ -211,6 +278,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                   </button>
                 ))}
               </div>
+              )}
             </div>
 
             {/* Subscriber Details Card */}
@@ -222,9 +290,22 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                       <UserCheck className="w-4 h-4" />
                       <span>Абоненттин жеке эсеби табылды</span>
                     </div>
-                    <h4 className="text-base font-bold text-stone-900 mt-1">{selectedSubscriber.fullName}</h4>
-                    <p className="text-xs text-stone-500 mt-0.5">{selectedSubscriber.address}</p>
-                    <p className="text-xs font-mono text-stone-500">{selectedSubscriber.phone}</p>
+                    <h4 className="text-base font-bold text-stone-900 mt-1">
+                      {isAdminLoggedIn ? selectedSubscriber.fullName : maskName(selectedSubscriber.fullName)}
+                    </h4>
+                    <p className="text-xs text-stone-500 mt-0.5">
+                      {isAdminLoggedIn ? selectedSubscriber.address : maskAddress(selectedSubscriber.address)}
+                    </p>
+                    <p className="text-xs font-mono text-stone-500">
+                      {isAdminLoggedIn ? selectedSubscriber.phone : maskPhone(selectedSubscriber.phone)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleClearSubscriber}
+                      className="mt-1 text-[11px] font-semibold text-stone-500 hover:text-rose-600 underline cursor-pointer"
+                    >
+                      Башка эсеп тандоо
+                    </button>
                   </div>
                   <div className="text-right">
                     <span className="text-[11px] text-stone-400 uppercase block font-mono">Лицевой эсеп</span>
@@ -335,8 +416,8 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
             <div className="p-4 rounded-xl bg-white border border-stone-200 text-xs text-stone-500 flex items-center gap-3">
               <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0" />
               <div>
-                <p className="font-semibold text-stone-800">Коопсуз мамлекеттик шлюз</p>
-                <p className="text-[11px]">Бардык төлөмдөр Улуттук Банктын лицензияланган төлөм операторлору аркылуу дароо кабыл алынат.</p>
+                <p className="font-semibold text-stone-800">Жеке маалыматтар корголот</p>
+                <p className="text-[11px]">Эсеп так номери боюнча гана табылат, аты-жөнү жана телефону толук көрсөтүлбөйт.</p>
               </div>
             </div>
           </div>
@@ -409,7 +490,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                 <label className="block font-semibold text-stone-700 mb-1">Төлөөчүнүн аты-жөнү:</label>
                 <input
                   type="text"
-                  value={selectedSubscriber ? selectedSubscriber.fullName : customPayerName}
+                  value={customPayerName}
                   onChange={(e) => setCustomPayerName(e.target.value)}
                   placeholder="Фамилия Аты Атасынын аты"
                   className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white text-xs"
@@ -420,7 +501,8 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                 <label className="block font-semibold text-stone-700 mb-1">Байланыш телефону (SMS чек үчүн):</label>
                 <input
                   type="text"
-                  value={selectedSubscriber ? selectedSubscriber.phone : customPayerPhone}
+                  value={customPayerPhone}
+                  inputMode="tel"
                   onChange={(e) => setCustomPayerPhone(e.target.value)}
                   placeholder="+996 (___) __-__-__"
                   className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white text-xs font-mono"
@@ -440,7 +522,10 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                     min="10"
                     step="10"
                     value={customAmount}
-                    onChange={(e) => setCustomAmount(Number(e.target.value))}
+                    onChange={(e) => {
+                      setCustomAmount(Number(e.target.value));
+                      setAmountError(null);
+                    }}
                     className="w-full px-4 py-2.5 bg-stone-50 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white text-lg font-bold font-mono text-stone-900"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-stone-400 text-sm">
@@ -448,6 +533,10 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                   </span>
                 </div>
               </div>
+
+              {amountError && (
+                <p className="mt-1 text-[11px] text-rose-600 font-semibold">{amountError}</p>
+              )}
 
               {/* Quick Sum presets */}
               <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -524,7 +613,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                     {paymentMethod} аркылуу тез төлөө
                   </div>
                   <p className="text-[11px] text-stone-500 mt-0.5">
-                    Сумма: <strong className="font-mono text-emerald-700 text-sm">{customAmount.toLocaleString('ru-RU')} сом</strong>
+                    Сумма: <strong className="font-mono text-emerald-700 text-sm">{(customAmount || 0).toLocaleString('ru-RU')} сом</strong>
                   </p>
                   <p className="text-[10px] text-stone-400">Комиссия: 0 сом (айыл өкмөтү тарабынан субсидияланган)</p>
                 </div>
@@ -532,7 +621,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
 
               <button
                 type="button"
-                disabled={isProcessing || customAmount <= 0}
+                disabled={isProcessing || !(customAmount > 0)}
                 onClick={handleExecutePayment}
                 className="w-full sm:w-auto px-6 py-3 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-bold rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2 cursor-pointer"
               >
@@ -544,7 +633,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4" />
-                    <span>{customAmount.toLocaleString('ru-RU')} с. Төлөө</span>
+                    <span>{(customAmount || 0).toLocaleString('ru-RU')} с. {PAYMENTS_DEMO_MODE ? 'Төлөө (демо)' : 'Төлөө'}</span>
                   </>
                 )}
               </button>
@@ -581,7 +670,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {transactions.map((tx) => (
+                {(isAdminLoggedIn ? transactions : transactions.slice(0, 10)).map((tx) => (
                   <tr key={tx.id} className="hover:bg-stone-50/60 transition-colors">
                     <td className="py-3 px-3 font-mono font-medium text-stone-900">
                       {tx.receiptNumber}
@@ -590,8 +679,12 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                       {tx.timestamp}
                     </td>
                     <td className="py-3 px-3">
-                      <div className="font-semibold text-stone-900">{tx.payerName}</div>
-                      <div className="text-[10px] text-stone-400 font-mono">{tx.payerPhone}</div>
+                      <div className="font-semibold text-stone-900">
+                        {isAdminLoggedIn ? tx.payerName : maskName(tx.payerName)}
+                      </div>
+                      {isAdminLoggedIn && (
+                        <div className="text-[10px] text-stone-400 font-mono">{tx.payerPhone}</div>
+                      )}
                     </td>
                     <td className="py-3 px-3 max-w-[200px] truncate" title={tx.serviceName}>
                       {tx.serviceName}
@@ -606,7 +699,11 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                     </td>
                     <td className="py-3 px-3 text-center">
                       <button
-                        onClick={() => setActiveReceipt(tx)}
+                        onClick={() => setActiveReceipt(
+                          isAdminLoggedIn
+                            ? tx
+                            : { ...tx, payerName: maskName(tx.payerName), payerPhone: maskPhone(tx.payerPhone) }
+                        )}
                         className="px-2.5 py-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-md transition-colors cursor-pointer"
                       >
                         Чекти көрүү
@@ -625,6 +722,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
         <ReceiptModal
           transaction={activeReceipt}
           onClose={() => setActiveReceipt(null)}
+          isDemo={PAYMENTS_DEMO_MODE}
         />
       )}
     </section>

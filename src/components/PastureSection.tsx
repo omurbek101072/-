@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PASTURE_REPORTS } from '../types';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
+import { downloadDocument, DOC_MISSING_MESSAGE } from '../utils/documents';
 import { Mountain, Calculator, FileText, CheckCircle2, Download, ExternalLink, ShieldCheck, MapPin, Compass, AlertCircle, ArrowRight } from 'lucide-react';
 
 interface PastureSectionProps {
@@ -47,9 +48,10 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
   const [reportModalOpen, setReportModalOpen] = useState<boolean>(false);
   const [downloadSuccessNotice, setDownloadSuccessNotice] = useState<string | null>(null);
 
-  const handleDownloadReport = (title: string) => {
-    setDownloadSuccessNotice(`«${title}» расмий отчет файлы жүктөлүп алынды.`);
-    setTimeout(() => setDownloadSuccessNotice(null), 4000);
+  const handleDownloadReport = async (title: string) => {
+    const ok = await downloadDocument('/docs/jayyt-otchet-2025.pdf', `${title}.pdf`);
+    setDownloadSuccessNotice(ok ? `«${title}» файлы жүктөлүп жатат.` : DOC_MISSING_MESSAGE);
+    setTimeout(() => setDownloadSuccessNotice(null), 5000);
   };
 
   return (
@@ -58,7 +60,7 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
         {/* Section Header with Kyrgyz pasture banner image */}
         <div className="relative rounded-3xl overflow-hidden bg-stone-900 text-white mb-10 shadow-lg">
           <img
-            src="/src/assets/images/tazalyk_pasture_landscape_1791715452252.jpg"
+            src="/images/tazalyk_pasture_landscape_1791715452252.jpg"
             alt="Кыргыз жайлоосу жана жайыттары"
             referrerPolicy="no-referrer"
             className="w-full h-56 sm:h-72 object-cover object-center opacity-70"

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { WASTE_SCHEDULE } from '../types';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
+import { PhoneLink } from './PhoneLink';
 import { 
   Droplets, 
   Trash2, 
@@ -20,9 +21,11 @@ import {
   Phone,
   Sparkles
 } from 'lucide-react';
+import { generateId, nowTimestamp } from '../utils/ids';
+import { isValidKgPhone, PHONE_ERROR } from '../utils/validation';
 
 interface WaterAndWasteSectionProps {
-  onDirectPayment: (serviceType: 'water' | 'waste', amount: number, details: string) => void;
+  onDirectPayment: (serviceType: 'water' | 'waste', amount: number, details: string, orderId?: string, accountId?: string) => void;
   onOpenCitizenRequest: () => void;
 }
 
@@ -30,7 +33,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
   onDirectPayment,
   onOpenCitizenRequest
 }) => {
-  const { tariffs, updateTariffs, siteSettings, isAdminLoggedIn } = useApp();
+  const { tariffs, updateTariffs, siteSettings, isAdminLoggedIn, subscribers, submitMeterReading, citizenTickets, addCitizenTicket } = useApp();
   const [activeTab, setActiveTab] = useState<'water' | 'waste'>('water');
 
   // Calculator Sub-mode:
@@ -40,20 +43,25 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
   const [waterCalcMode, setWaterCalcMode] = useState<'meter' | 'no-meter' | 'commercial'>('meter');
 
   // 1. Water with meter state
-  const [accountNumber, setAccountNumber] = useState<string>('1042');
-  const [prevReading, setPrevReading] = useState<number>(312);
-  const [currentReading, setCurrentReading] = useState<number>(330);
-  const [readingPhone, setReadingPhone] = useState<string>('+996 (702) 45-88-12');
+  const [accountNumber, setAccountNumber] = useState<string>('');
+  const [manualPrevReading, setManualPrevReading] = useState<number>(0);
+  const [currentReading, setCurrentReading] = useState<number>(0);
+  const [readingPhone, setReadingPhone] = useState<string>('+996 ');
   const [meterNotice, setMeterNotice] = useState<string | null>(null);
+  const [meterError, setMeterError] = useState<string | null>(null);
+  // Абонент табылса, мурунку көрсөткүч ишкананын базасынан алынат (колго өзгөртүүгө болбойт)
+  const meterSubscriber = subscribers.find(s => s.id === accountNumber.trim().replace(/^№/, ''));
+  const prevReading = meterSubscriber ? meterSubscriber.waterLastMeterReading : manualPrevReading;
+  const setPrevReading = setManualPrevReading;
 
   // 2. Water without meter state (per person)
-  const [noMeterAccount, setNoMeterAccount] = useState<string>('1043');
+  const [noMeterAccount, setNoMeterAccount] = useState<string>('');
   const [familyMembersCount, setFamilyMembersCount] = useState<number>(4);
   const [monthsCount, setMonthsCount] = useState<number>(1);
-  const [noMeterPhone, setNoMeterPhone] = useState<string>('+996 (770) 12-34-56');
+  const [noMeterPhone, setNoMeterPhone] = useState<string>('+996 ');
 
   // 3. Commercial & Irrigation state
-  const [commercialAccount, setCommercialAccount] = useState<string>('2001');
+  const [commercialAccount, setCommercialAccount] = useState<string>('');
   const [commercialType, setCommercialType] = useState<'commercial' | 'irrigation'>('commercial');
   const [commercialVolume, setCommercialVolume] = useState<number>(15); // м³ or сотых
   const [commercialMonths, setCommercialMonths] = useState<number>(1);
@@ -85,20 +93,50 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
   const activeCommRate = commercialType === 'commercial' ? waterCommercialRate : waterIrrigationRate;
   const calculatedCommercialCost = Math.round(commercialVolume * commercialMonths * activeCommRate);
 
+  // Көрсөткүчтү текшерип, абоненттин эсебине жазуу. Ийгиликтүү болсо true.
+  const recordMeterReading = (): boolean => {
+    if (!meterSubscriber) {
+      setMeterError('Мындай лицевой эсеп табылган жок. Квитанциядагы номерди текшериңиз.');
+      return false;
+    }
+    if (!isValidKgPhone(readingPhone)) {
+      setMeterError(PHONE_ERROR);
+      return false;
+    }
+    if (currentReading <= prevReading) {
+      setMeterError(`Жаңы көрсөткүч мурункудан (${prevReading} м³) чоң болушу керек.`);
+      return false;
+    }
+    if (currentReading - prevReading > 1000) {
+      setMeterError('Сарпталган суу өтө көп чыгып жатат. Көрсөткүчтү кайра текшериңиз.');
+      return false;
+    }
+    if (!submitMeterReading(meterSubscriber.id, currentReading, calculatedWaterCost)) {
+      setMeterError('Көрсөткүчтү сактоо мүмкүн болгон жок.');
+      return false;
+    }
+    setMeterError(null);
+    setMeterNotice(`Көрсөткүч кабыл алынды (эсеп №${meterSubscriber.id})! Сарпталган суу: ${consumedM3} м³. Эсептелген сумма: ${calculatedWaterCost} сом.`);
+    return true;
+  };
+
   const handleMeterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (currentReading < prevReading) {
-      alert('Жаңы көрсөткүч мурункудан аз болбошу керек!');
-      return;
-    }
-    setMeterNotice(`Көрсөткүч кабыл алынды! Сарпталган суу: ${consumedM3} м³. Сумма: ${calculatedWaterCost} сом.`);
+    recordMeterReading();
   };
 
   const handlePayWaterNow = () => {
+    // Төлөмдөн мурун көрсөткүч сөзсүз катталат, болбосо карыз эсепке алынбай калат
+    const consumed = consumedM3;
+    const cost = calculatedWaterCost;
+    const prev = prevReading;
+    if (!recordMeterReading()) return;
     onDirectPayment(
-      'water', 
-      calculatedWaterCost, 
-      `Водомер көрсөткүчү (${prevReading} -> ${currentReading} м³, сарпталды: ${consumedM3} м³, эсеп №${accountNumber})`
+      'water',
+      cost,
+      `Водомер көрсөткүчү (${prev} -> ${currentReading} м³, сарпталды: ${consumed} м³, эсеп №${meterSubscriber!.id})`,
+      undefined,
+      meterSubscriber!.id
     );
   };
 
@@ -106,7 +144,9 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
     onDirectPayment(
       'water', 
       calculatedNoMeterCost, 
-      `Эсептегичи жок суу акысы (${familyMembersCount} адам, ${monthsCount} ай, эсеп №${noMeterAccount})`
+      `Эсептегичи жок суу акысы (${familyMembersCount} адам, ${monthsCount} ай, эсеп №${noMeterAccount || '-'})`,
+      undefined,
+      noMeterAccount.trim() || undefined
     );
   };
 
@@ -116,7 +156,9 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
     onDirectPayment(
       'water', 
       calculatedCommercialCost, 
-      `${typeLabel} (${commercialVolume} ${unitLabel}, ${commercialMonths} ай, эсеп №${commercialAccount})`
+      `${typeLabel} (${commercialVolume} ${unitLabel}, ${commercialMonths} ай, эсеп №${commercialAccount || '-'})`,
+      undefined,
+      commercialAccount.trim() || undefined
     );
   };
 
@@ -141,8 +183,29 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
 
   const handleBulkySubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setBulkyNotice(`Ири таштанды чыгаруу өтүнмөсү катталды (№ ТШ-${Math.floor(100 + Math.random() * 900)}). Диспетчер тактоо үчүн байланышат.`);
+    if (!isValidKgPhone(bulkyPhone)) {
+      setBulkyNotice(PHONE_ERROR);
+      return;
+    }
+    if (!bulkyAddress.trim()) {
+      setBulkyNotice('Дарегиңизди жазыңыз.');
+      return;
+    }
+    // Өтүнмө админ панелиндеги «Арыздар» тизмесине түшөт
+    const id = generateId('ТШ', citizenTickets.map(t => t.id));
+    addCitizenTicket({
+      id,
+      category: `Ири таштанды чыгаруу: ${bulkyType}`,
+      name: 'Айыл тургуну',
+      phone: bulkyPhone.trim(),
+      address: bulkyAddress.trim(),
+      description: `Ири таштанды чыгаруу өтүнмөсү (${bulkyType})`,
+      status: 'Кабыл алынды',
+      date: nowTimestamp()
+    });
+    setBulkyNotice(`Ири таштанды чыгаруу өтүнмөсү катталды (№ ${id}). Диспетчер тактоо үчүн байланышат.`);
     setBulkyAddress('');
+    setBulkyPhone('+996 ');
   };
 
   return (
@@ -294,7 +357,8 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                           Байланыш телефону:
                         </label>
                         <input
-                          type="text"
+                          type="tel"
+                          inputMode="tel"
                           value={readingPhone}
                           onChange={(e) => setReadingPhone(e.target.value)}
                           placeholder="+996 (___) __-__-__"
@@ -312,10 +376,15 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                           type="number"
                           min="0"
                           value={prevReading}
+                          readOnly={!!meterSubscriber}
                           onChange={(e) => setPrevReading(Math.max(0, Number(e.target.value) || 0))}
-                          className="w-full px-3 py-2 bg-white border border-stone-300 rounded-lg font-mono font-bold text-stone-800 text-sm focus:ring-2 focus:ring-cyan-600 focus:outline-none"
+                          className="w-full px-3 py-2 bg-white read-only:bg-stone-100 border border-stone-300 rounded-lg font-mono font-bold text-stone-800 text-sm focus:ring-2 focus:ring-cyan-600 focus:outline-none"
                         />
-                        <span className="text-[10px] text-stone-400 mt-0.5 block">Ишкананын базасындагы акыркы көрсөткүч</span>
+                        <span className="text-[10px] text-stone-400 mt-0.5 block">
+                          {meterSubscriber
+                            ? 'Ишкананын базасындагы акыркы көрсөткүч'
+                            : 'Эсеп номерин жазсаңыз, базадан автоматтык түрдө алынат'}
+                        </span>
                       </div>
 
                       <div>
@@ -332,6 +401,10 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                         <span className="text-[10px] text-cyan-700 mt-0.5 block">Эсептегичтен (водомерден) карап жазыңыз</span>
                       </div>
                     </div>
+
+                    {meterError && (
+                      <p className="text-[11px] font-semibold text-rose-600">{meterError}</p>
+                    )}
 
                     {/* Dynamic calculation banner */}
                     <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -385,7 +458,8 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                           Байланыш телефону:
                         </label>
                         <input
-                          type="text"
+                          type="tel"
+                          inputMode="tel"
                           value={noMeterPhone}
                           onChange={(e) => setNoMeterPhone(e.target.value)}
                           placeholder="+996 (___) __-__-__"
@@ -813,7 +887,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                   </p>
                   <div className="pt-1 flex items-center gap-2 text-[10px] text-cyan-200">
                     <Phone className="w-3 h-3" />
-                    <span>Диспетчер: <strong className="font-mono text-white">{siteSettings.dispatcherPhone}</strong></span>
+                    <span>Диспетчер: <strong className="font-mono text-white"><PhoneLink phone={siteSettings.dispatcherPhone}>{siteSettings.dispatcherPhone}</PhoneLink></strong></span>
                   </div>
                 </div>
               </div>
@@ -936,7 +1010,8 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                   <div>
                     <label className="block text-stone-700 font-semibold mb-1">Байланыш телефону:</label>
                     <input
-                      type="text"
+                      type="tel"
+                      inputMode="tel"
                       required
                       value={bulkyPhone}
                       onChange={(e) => setBulkyPhone(e.target.value)}
