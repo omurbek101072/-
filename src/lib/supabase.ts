@@ -75,7 +75,12 @@ async function parseError(res: Response): Promise<ApiError> {
 
 function translateError(msg: string, status: number): string {
   if (/Invalid login credentials/i.test(msg)) return 'Email же сырсөз туура эмес.';
-  if (/Email not confirmed/i.test(msg)) return 'Email ырастала элек. Supabase панелинен колдонуучуну ырастаңыз.';
+  if (/Email not confirmed/i.test(msg)) return 'Email ырастала элек. Почтаңызга келген каттагы шилтемени басыңыз.';
+  if (/already registered|already been registered|already exists/i.test(msg)) return 'Бул email мурунтан катталган. «Кирүү» өтмөгүнөн кириңиз же сырсөздү калыбына келтириңиз.';
+  if (/Signups not allowed|signup.*disabled/i.test(msg)) return 'Катталуу өчүрүлгөн. Supabase → Authentication → Sign In / Providers бөлүмүнөн «Allow new users to sign up» күйгүзүңүз.';
+  if (/Unable to validate email|invalid.*email/i.test(msg)) return 'Email туура эмес жазылды.';
+  if (/same.*password|should be different/i.test(msg)) return 'Жаңы сырсөз эскисинен айырмаланышы керек.';
+  if (/weak|pwned|leaked/i.test(msg)) return 'Бул сырсөз өтө жөнөкөй. Узунураак жана татаалыраак сырсөз коюңуз.';
   if (/Password should be at least/i.test(msg)) return 'Сырсөз кеминде 6 белгиден турушу керек.';
   if (/rate limit|too many/i.test(msg)) return 'Өтө көп аракет. Бир аздан кийин кайра аракет кылыңыз.';
   if (/row-level security|permission denied/i.test(msg) || status === 401 || status === 403) {
@@ -180,8 +185,91 @@ export const db = {
   }
 };
 
+// Почтадагы шилтемеден кайтканда (катталууну ырастоо, сырсөздү калыбына келтирүү, чакыруу)
+// Supabase токендерди даректин #... бөлүгүнө салып жиберет. Аларды окуп, сессия түзөбүз.
+export type AuthRedirect = { type: 'recovery' | 'signup' | 'invite' | 'magiclink' | 'email_change' | string; error?: string } | null;
+
+export async function consumeAuthRedirect(): Promise<AuthRedirect> {
+  let hash = '';
+  try {
+    hash = window.location.hash.replace(/^#/, '');
+  } catch {
+    return null;
+  }
+  if (!hash || !/(access_token|error_description)=/.test(hash)) return null;
+  const p = new URLSearchParams(hash);
+  // Токендерди даректен дароо тазалайбыз (тарыхта жана скриншотто калбасын)
+  try {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  } catch {
+    // ignore
+  }
+  if (p.get('error_description')) {
+    const msg = p.get('error_description') || '';
+    return {
+      type: p.get('type') || 'error',
+      error: /expired|invalid/i.test(msg) ? 'Шилтеменин мөөнөтү бүткөн же ал мурун колдонулган. Кайра сураңыз.' : msg
+    };
+  }
+  const access = p.get('access_token');
+  const refreshTok = p.get('refresh_token');
+  if (!access || !refreshTok) return null;
+  let email = '';
+  try {
+    const payload = JSON.parse(decodeURIComponent(escape(atob(access.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))));
+    email = payload.email || '';
+  } catch {
+    // ignore
+  }
+  saveSession({
+    access_token: access,
+    refresh_token: refreshTok,
+    expires_at: Number(p.get('expires_at')) || Math.floor(Date.now() / 1000) + Number(p.get('expires_in') || 3600),
+    email
+  });
+  return { type: p.get('type') || 'signup' };
+}
+
+// Почтадагы шилтеме кайсы дарекке кайтарылат (сайт интернетте турганда гана мааниси бар)
+function redirectUrl(): string | undefined {
+  try {
+    const u = window.location;
+    if (u.protocol === 'http:' || u.protocol === 'https:') return u.origin + u.pathname;
+  } catch {
+    // ignore
+  }
+  return undefined;
+}
+
 // ---------- Кирүү (Supabase Auth) ----------
 export const auth = {
+  // Катталуу. Email ырастоо күйгүзүлгөн болсо, сессия кайтпайт — почтаны текшерүү керек.
+  async signUp(email: string, password: string): Promise<{ needsConfirmation: boolean }> {
+    const r = redirectUrl();
+    let res: Response;
+    try {
+      res = await fetch(`${SUPABASE_URL}/auth/v1/signup${r ? `?redirect_to=${encodeURIComponent(r)}` : ''}`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password })
+      });
+    } catch {
+      throw new ApiError('Сервер менен байланыш жок. Интернетти текшериңиз.', 0);
+    }
+    if (!res.ok) throw await parseError(res);
+    const data = await res.json();
+    if (data.access_token) {
+      saveSession(toSession(data));
+      return { needsConfirmation: false };
+    }
+    // Supabase email мурунтан бар болсо да ката бербей, бош identities кайтарат
+    const user = data.user || data;
+    if (user && Array.isArray(user.identities) && user.identities.length === 0) {
+      throw new ApiError('Бул email мурунтан катталган. «Кирүү» өтмөгүнөн кириңиз же сырсөздү калыбына келтириңиз.', 400);
+    }
+    return { needsConfirmation: true };
+  },
+
   async signIn(email: string, password: string): Promise<AuthSession> {
     let res: Response;
     try {
@@ -218,6 +306,21 @@ export const auth = {
   },
 
   async sendPasswordReset(email: string): Promise<void> {
-    await request<void>('/auth/v1/recover', { method: 'POST', body: JSON.stringify({ email: email.trim() }) });
+    const r = redirectUrl();
+    let res: Response;
+    try {
+      res = await fetch(`${SUPABASE_URL}/auth/v1/recover${r ? `?redirect_to=${encodeURIComponent(r)}` : ''}`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() })
+      });
+    } catch {
+      throw new ApiError('Сервер менен байланыш жок. Интернетти текшериңиз.', 0);
+    }
+    if (!res.ok) throw await parseError(res);
+  },
+
+  canReceiveEmailLinks(): boolean {
+    return !!redirectUrl();
   }
 };

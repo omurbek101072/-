@@ -39,6 +39,7 @@ import {
 import { generateId, nowTimestamp } from '../utils/ids';
 import { ReceiptModal } from './ReceiptModal';
 import { SiteContentEditor } from './SiteContentEditor';
+import { AdminManager } from './AdminManager';
 
 interface AdminPanelProps {
   onClose: () => void;
@@ -69,7 +70,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'orders' | 'tickets' | 'cashier' | 'subscribers' | 'settings' | 'site_content' | 'reports'
+    'overview' | 'orders' | 'tickets' | 'cashier' | 'subscribers' | 'settings' | 'site_content' | 'reports' | 'admins'
   >('overview');
 
   const [localSiteSettings, setLocalSiteSettings] = useState(siteSettings);
@@ -424,6 +425,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             >
               <Edit2 className="w-4 h-4 text-amber-600" />
               <span>Аталыштар & Мазмун</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('admins')}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+                activeTab === 'admins'
+                  ? 'bg-emerald-50 text-emerald-900 font-bold'
+                  : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4 text-emerald-700" />
+              <span>Админдер</span>
             </button>
 
             <button
@@ -1498,6 +1511,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
           )}
 
           {/* ================= TAB: SITE CONTENT & TITLES ================= */}
+          {activeTab === 'admins' && (
+            <div className="max-w-2xl">
+              <AdminManager />
+            </div>
+          )}
+
           {activeTab === 'site_content' && (
             <SiteContentEditor />
           )}

@@ -13,7 +13,7 @@ import {
   INITIAL_SITE_SETTINGS,
   PASTURE_ZONES
 } from '../data/mockData';
-import { db, auth, getSession, ApiError } from '../lib/supabase';
+import { db, auth, getSession, ApiError, consumeAuthRedirect } from '../lib/supabase';
 
 // ---------- Базадагы абонент ↔ сайттагы абонент ----------
 interface SubscriberRow {
@@ -70,6 +70,16 @@ export interface MeterResult {
   amount: number;
 }
 
+export interface AdminInfo {
+  email: string;
+  addedAt: string;
+  registered: boolean;
+  confirmed: boolean;
+  lastSignIn: string | null;
+}
+
+type Result = { ok: boolean; error?: string; info?: string };
+
 export type TicketInput = Pick<CitizenTicket, 'category' | 'name' | 'phone' | 'address' | 'description'> & {
   photo?: string;
 };
@@ -116,10 +126,19 @@ interface AppContextType {
   updateTariffs: (newTariffs: TariffConfig) => void;
   updateSiteSettings: (updates: Partial<SiteSettings>) => void;
   updatePastureZone: (zoneId: string, updates: Partial<PastureZone>) => void;
-  loginAdmin: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  changeAdminPassword: (newPassword: string) => Promise<{ ok: boolean; error?: string }>;
+  loginAdmin: (email: string, password: string) => Promise<Result>;
+  registerAdmin: (email: string, password: string) => Promise<Result>;
+  requestPasswordReset: (email: string) => Promise<Result>;
+  completePasswordRecovery: (newPassword: string) => Promise<Result>;
+  changeAdminPassword: (newPassword: string) => Promise<Result>;
+  passwordRecoveryActive: boolean;
+  authMessage: string | null;
+  clearAuthMessage: () => void;
+  listAdmins: () => Promise<AdminInfo[]>;
+  addAdmin: (email: string) => Promise<Result>;
+  removeAdmin: (email: string) => Promise<Result>;
   logoutAdmin: () => void;
-  refreshData: () => Promise<void>;
+  refreshData: (keepNonAdminSession?: boolean) => Promise<void>;
   resetToDefaults: () => void;
 }
 
@@ -146,6 +165,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoading, setIsLoading] = useState(true);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
+  const [passwordRecoveryActive, setPasswordRecoveryActive] = useState(false);
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
 
   // Админдин өзгөртүүсү серверге сакталбай калса — экранга чыгарабыз
   const report = useCallback((e: unknown) => {
@@ -202,13 +223,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return !!ok;
   }, [loadAdmin]);
 
-  const refreshData = useCallback(async () => {
+  const refreshData = useCallback(async (keepNonAdminSession = false) => {
     setIsLoading(true);
     try {
       await loadPublic();
       if (getSession()) {
         const ok = await checkAdmin();
-        if (!ok) {
+        if (!ok && !keepNonAdminSession) {
           await auth.signOut();
           setIsAdminLoggedIn(false);
         }
@@ -230,7 +251,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       // ignore
     }
-    refreshData();
+    (async () => {
+      // Почтадагы шилтемеден келдиби? (катталууну ырастоо / сырсөздү калыбына келтирүү)
+      const r = await consumeAuthRedirect();
+      if (r?.error) {
+        setAuthMessage(r.error);
+      } else if (r?.type === 'recovery') {
+        setPasswordRecoveryActive(true);
+      } else if (r) {
+        setAuthMessage('Email ырасталды! Эгер сиз админ болсоңуз, башкаруу панели ачылат. Болбосо учурдагы админден сизди «Админдер» бөлүмүнө кошууну сураныңыз.');
+      }
+      await refreshData(r?.type === 'recovery');
+    })();
   }, [refreshData]);
 
   // ================= Эл үчүн аракеттер =================
@@ -382,13 +414,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     persist(db.upsert('pasture_zones', { id: zoneId, data: merged, sort: Math.max(0, sort) }));
   };
 
-  const loginAdmin = async (email: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+  const NOT_ADMIN_MSG =
+    'Сиз катталгансыз, бирок азырынча админ эмессиз. Учурдагы админден email\'иңизди Башкаруу панелиндеги «Админдер» бөлүмүнө кошууну сураныңыз.';
+
+  const loginAdmin = async (email: string, password: string): Promise<Result> => {
     try {
       await auth.signIn(email, password);
       const ok = await checkAdmin();
       if (!ok) {
         await auth.signOut();
-        return { ok: false, error: 'Бул колдонуучу админ эмес. Supabase\'теги admins таблицасына email кошуңуз.' };
+        return { ok: false, error: NOT_ADMIN_MSG };
       }
       return { ok: true };
     } catch (e) {
@@ -396,10 +431,83 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const changeAdminPassword = async (newPassword: string): Promise<{ ok: boolean; error?: string }> => {
+  const registerAdmin = async (email: string, password: string): Promise<Result> => {
+    if (password.length < 8) return { ok: false, error: 'Сырсөз кеминде 8 белгиден турушу керек.' };
+    try {
+      const { needsConfirmation } = await auth.signUp(email, password);
+      if (needsConfirmation) {
+        return {
+          ok: true,
+          info: auth.canReceiveEmailLinks()
+            ? `${email} дарегине ырастоо каты жөнөтүлдү. Каттагы шилтемени басыңыз, анан ушул жерден кириңиз.`
+            : `${email} дарегине ырастоо каты жөнөтүлдү. Каттагы шилтемени басыңыз (ачылган барак ката көрсөтсө да email ырасталат), анан ушул жерден кириңиз.`
+        };
+      }
+      const ok = await checkAdmin();
+      if (!ok) {
+        await auth.signOut();
+        return { ok: true, info: 'Катталдыңыз! ' + NOT_ADMIN_MSG };
+      }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: errText(e) };
+    }
+  };
+
+  const requestPasswordReset = async (email: string): Promise<Result> => {
+    try {
+      await auth.sendPasswordReset(email);
+      return {
+        ok: true,
+        info: auth.canReceiveEmailLinks()
+          ? `Эгер ${email} катталган болсо, ага сырсөздү калыбына келтирүү шилтемеси жөнөтүлдү.`
+          : `Шилтеме жөнөтүлдү, бирок ал сайт интернетке жайгаштырылганда гана иштейт. Азыр сырсөздү Supabase панелинен алмаштырыңыз.`
+      };
+    } catch (e) {
+      return { ok: false, error: errText(e) };
+    }
+  };
+
+  const completePasswordRecovery = async (newPassword: string): Promise<Result> => {
     if (newPassword.length < 8) return { ok: false, error: 'Сырсөз кеминде 8 белгиден турушу керек.' };
     try {
       await auth.changePassword(newPassword);
+      setPasswordRecoveryActive(false);
+      const ok = await checkAdmin();
+      if (!ok) {
+        await auth.signOut();
+        return { ok: true, info: 'Сырсөз алмаштырылды. ' + NOT_ADMIN_MSG };
+      }
+      return { ok: true, info: 'Сырсөз алмаштырылды!' };
+    } catch (e) {
+      return { ok: false, error: errText(e) };
+    }
+  };
+
+  const changeAdminPassword = async (newPassword: string): Promise<Result> => {
+    if (newPassword.length < 8) return { ok: false, error: 'Сырсөз кеминде 8 белгиден турушу керек.' };
+    try {
+      await auth.changePassword(newPassword);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: errText(e) };
+    }
+  };
+
+  const listAdmins = async (): Promise<AdminInfo[]> => (await db.rpc<AdminInfo[]>('admin_list')) || [];
+
+  const addAdmin = async (email: string): Promise<Result> => {
+    try {
+      await db.rpc('admin_add', { p_email: email });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: errText(e) };
+    }
+  };
+
+  const removeAdmin = async (email: string): Promise<Result> => {
+    try {
+      await db.rpc('admin_remove', { p_email: email });
       return { ok: true };
     } catch (e) {
       return { ok: false, error: errText(e) };
@@ -457,7 +565,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateSiteSettings,
         updatePastureZone,
         loginAdmin,
+        registerAdmin,
+        requestPasswordReset,
+        completePasswordRecovery,
         changeAdminPassword,
+        passwordRecoveryActive,
+        authMessage,
+        clearAuthMessage: () => setAuthMessage(null),
+        listAdmins,
+        addAdmin,
+        removeAdmin,
         logoutAdmin,
         refreshData,
         resetToDefaults

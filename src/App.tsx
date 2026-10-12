@@ -15,7 +15,7 @@ import { ReportsSection } from './components/ReportsSection';
 import { Footer } from './components/Footer';
 import { CitizenRequestModal } from './components/CitizenRequestModal';
 import { AdminPanel } from './components/AdminPanel';
-import { AdminLoginModal } from './components/AdminLoginModal';
+import { AdminLoginModal, PasswordRecoveryModal } from './components/AdminLoginModal';
 import { AdminTopBar } from './components/AdminTopBar';
 
 // Сервер менен байланыш жок болсо же админдин өзгөртүүсү сакталбаса — экранга чыгаруу
@@ -223,6 +223,13 @@ function MainAppContent() {
         onSuccess={() => {
           setIsLoginModalOpen(false);
           setIsAdminOpen(true);
+        }}
+      />
+
+      {/* Почтадагы шилтемеден келгенде: жаңы сырсөз коюу же билдирүү */}
+      <PasswordRecoveryModal
+        onDone={() => {
+          if (isAdminLoggedIn) setIsAdminOpen(true);
         }}
       />
 

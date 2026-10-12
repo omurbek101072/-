@@ -774,7 +774,7 @@ export const SiteContentEditor: React.FC = () => {
               </button>
               <p className="text-[11px] text-stone-500">
                 Сырсөз Supabase'те шифрленген түрдө сакталат. Жаңы админ кошуу үчүн
-                Supabase → Authentication бөлүмүнөн колдонуучу түзүп, анын email'ин admins таблицасына кошуңуз.
+                Башкаруу панелиндеги «Админдер» бөлүмүнө өтүңүз.
               </p>
             </div>
           </div>
