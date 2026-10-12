@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { PASTURE_REPORTS } from '../types';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
 import { downloadDocument, DOC_MISSING_MESSAGE } from '../utils/documents';
@@ -10,7 +9,8 @@ interface PastureSectionProps {
 }
 
 export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment }) => {
-  const { pastureZones, tariffs, siteSettings } = useApp();
+  const { pastureZones, tariffs, siteSettings, content } = useApp();
+  const report = content.pastureReport;
 
   // Calculator state
   const [cattleCount, setCattleCount] = useState<number>(3); // уй
@@ -48,9 +48,13 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
   const [reportModalOpen, setReportModalOpen] = useState<boolean>(false);
   const [downloadSuccessNotice, setDownloadSuccessNotice] = useState<string | null>(null);
 
-  const handleDownloadReport = async (title: string) => {
-    const ok = await downloadDocument('/docs/jayyt-otchet-2025.pdf', `${title}.pdf`);
-    setDownloadSuccessNotice(ok ? `«${title}» файлы жүктөлүп жатат.` : DOC_MISSING_MESSAGE);
+  const handleDownloadReport = async () => {
+    if (/^https?:\/\//.test(report.pdfUrl)) {
+      window.open(report.pdfUrl, '_blank', 'noopener');
+      return;
+    }
+    const ok = await downloadDocument(report.pdfUrl, `${report.title}.pdf`);
+    setDownloadSuccessNotice(ok ? 'Отчет файлы жүктөлүп жатат.' : DOC_MISSING_MESSAGE);
     setTimeout(() => setDownloadSuccessNotice(null), 5000);
   };
 
@@ -60,7 +64,7 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
         {/* Section Header with Kyrgyz pasture banner image */}
         <div className="relative rounded-3xl overflow-hidden bg-stone-900 text-white mb-10 shadow-lg">
           <img
-            src="images/tazalyk_pasture_landscape_1791715452252.jpg"
+            src={content.images.pasture}
             alt="Кыргыз жайлоосу жана жайыттары"
             referrerPolicy="no-referrer"
             className="w-full h-56 sm:h-72 object-cover object-center opacity-70"
@@ -406,78 +410,76 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
                 <FileText className="w-4 h-4" />
                 <span>Элдик ачык көзөмөл</span>
               </div>
-              <h3 className="text-xl font-bold text-stone-900 mt-1">
-                Жайыт комитетинин каржылык жана чарбалык отчеттору
-              </h3>
-              <p className="text-xs text-stone-500 mt-1 max-w-2xl">
-                Тургундардан чогулган жайыт акысы кайда сарпталды? Көпүрөлөрдү оңдоо, ашуу жолдорун тегиздөө, суу ноолорун орнотуу жана чөп сээп калыбына келтирүү иштери.
-              </p>
+              <h3 className="text-xl font-bold text-stone-900 mt-1">{report.title}</h3>
+              <p className="text-xs text-stone-500 mt-1 max-w-2xl whitespace-pre-line">{report.intro}</p>
             </div>
 
             {/* Download Main PDF */}
+            {report.pdfUrl && (
             <button
-              onClick={() => handleDownloadReport('2025-жылдык жайыт комитетинин финансылык отчету')}
+              type="button"
+              onClick={handleDownloadReport}
               className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors cursor-pointer shrink-0"
             >
               <Download className="w-4 h-4 text-emerald-700" />
-              <span>Жылдык отчетту жүктөө (PDF 2.4 MB)</span>
+              <span>{report.pdfLabel}</span>
             </button>
+            )}
           </div>
 
           {/* Metric KPI cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
             <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/80">
               <span className="text-[11px] uppercase tracking-wider text-stone-500 font-semibold block">
-                Чогултулган каражаттар (2025-ж)
+                {report.collectedLabel}
               </span>
               <div className="text-2xl font-extrabold text-emerald-700 font-mono tabular-nums mt-1">
-                1,485,600 сом
+                {(Number(report.collected) || 0).toLocaleString('ru-RU')} сом
               </div>
-              <p className="text-[11px] text-stone-500 mt-1">
-                2,480 бодо мал, 1,120 жылкы, 16,400 койдон
-              </p>
+              <p className="text-[11px] text-stone-500 mt-1">{report.collectedNote}</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/80">
               <span className="text-[11px] uppercase tracking-wider text-stone-500 font-semibold block">
-                Жайыт жакшыртууга сарпталган
+                {report.spentLabel}
               </span>
               <div className="text-2xl font-extrabold text-stone-900 font-mono tabular-nums mt-1">
-                1,392,400 сом
+                {(Number(report.spent) || 0).toLocaleString('ru-RU')} сом
               </div>
               <p className="text-[11px] text-emerald-700 font-medium mt-1">
-                Калдык каражат: 93,200 сом (резервдик фонддо)
+                {Number(report.collected) - Number(report.spent) >= 0
+                  ? `Калдык: ${(Number(report.collected) - Number(report.spent)).toLocaleString('ru-RU')} сом. `
+                  : ''}
+                {report.spentNote}
               </p>
             </div>
 
             <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/80">
               <span className="text-[11px] uppercase tracking-wider text-stone-500 font-semibold block">
-                Аткарылган чарбалык иштер
+                {report.worksLabel}
               </span>
               <div className="text-2xl font-extrabold text-indigo-700 font-mono tabular-nums mt-1">
-                6 ири долбоор
+                {report.worksValue}
               </div>
-              <p className="text-[11px] text-stone-500 mt-1">
-                2 көпүрө, 18 км жол, 6 суу ноосу, 45 га сээлди
-              </p>
+              <p className="text-[11px] text-stone-500 mt-1">{report.worksNote}</p>
             </div>
           </div>
 
           {/* Breakdown of Completed Works */}
           <div>
             <h4 className="text-sm font-bold text-stone-900 mb-3">
-              Жайыт фондунун эсебинен аткарылган иштердин тизмеси:
+              {report.worksTitle}
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {PASTURE_REPORTS[0].completedWorks.map((work, idx) => (
-                <div key={idx} className="p-4 rounded-xl border border-stone-200 bg-stone-50/50 flex flex-col justify-between">
+              {report.works.map((work, idx) => (
+                <div key={work.id} className="p-4 rounded-xl border border-stone-200 bg-stone-50/50 flex flex-col justify-between">
                   <div>
                     <div className="flex items-start justify-between gap-2">
                       <h5 className="font-bold text-xs text-stone-900 leading-snug">
                         {work.title}
                       </h5>
                       <span className="font-mono font-bold text-emerald-800 text-xs shrink-0 tabular-nums">
-                        {work.cost.toLocaleString('ru-RU')} сом
+                        {(Number(work.cost) || 0).toLocaleString('ru-RU')} сом
                       </span>
                     </div>
                     <p className="text-[11px] text-stone-600 mt-1.5 leading-relaxed">
@@ -485,7 +487,7 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
                     </p>
                   </div>
                   <div className="mt-3 pt-2 border-t border-stone-200/60 flex items-center justify-between text-[10px] text-stone-400">
-                    <span>Акт № {idx + 14} / 2025</span>
+                    <span>№ {idx + 1}</span>
                     <span className="text-emerald-700 font-medium flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3" />
                       Аткарылды жана кабыл алынды

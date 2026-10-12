@@ -27,6 +27,7 @@ import {
   Printer,
   ArrowRight,
   ShieldAlert,
+  FileText,
   Calendar,
   Phone,
   MapPin,
@@ -40,6 +41,7 @@ import { generateId, nowTimestamp } from '../utils/ids';
 import { ReceiptModal } from './ReceiptModal';
 import { SiteContentEditor } from './SiteContentEditor';
 import { AdminManager } from './AdminManager';
+import { ContentManager } from './ContentManager';
 
 interface AdminPanelProps {
   onClose: () => void;
@@ -70,7 +72,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'orders' | 'tickets' | 'cashier' | 'subscribers' | 'settings' | 'site_content' | 'reports' | 'admins'
+    'overview' | 'orders' | 'tickets' | 'cashier' | 'subscribers' | 'settings' | 'site_content' | 'reports' | 'admins' | 'content'
   >('overview');
 
   const [localSiteSettings, setLocalSiteSettings] = useState(siteSettings);
@@ -425,6 +427,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             >
               <Edit2 className="w-4 h-4 text-amber-600" />
               <span>Аталыштар & Мазмун</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('content')}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+                activeTab === 'content'
+                  ? 'bg-emerald-50 text-emerald-900 font-bold'
+                  : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+              }`}
+            >
+              <FileText className="w-4 h-4 text-sky-700" />
+              <span>Жаңылыктар, отчеттор, сүрөттөр</span>
             </button>
 
             <button
@@ -1511,6 +1525,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
           )}
 
           {/* ================= TAB: SITE CONTENT & TITLES ================= */}
+          {activeTab === 'content' && <ContentManager />}
+
           {activeTab === 'admins' && (
             <div className="max-w-2xl">
               <AdminManager />

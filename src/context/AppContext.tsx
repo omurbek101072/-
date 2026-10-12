@@ -14,6 +14,7 @@ import {
   PASTURE_ZONES
 } from '../data/mockData';
 import { db, auth, getSession, ApiError, consumeAuthRedirect } from '../lib/supabase';
+import { SiteContent, DEFAULT_CONTENT, mergeContent } from '../data/content';
 
 // ---------- Базадагы абонент ↔ сайттагы абонент ----------
 interface SubscriberRow {
@@ -123,6 +124,10 @@ interface AppContextType {
   updateSubscriber: (subscriber: SubscriberAccount) => void;
   addSubscriber: (subscriber: SubscriberAccount) => void;
   updateMachineryItem: (item: MachineryItem) => void;
+  addMachineryItem: (item: MachineryItem) => void;
+  deleteMachineryItem: (id: string) => void;
+  content: SiteContent;
+  updateContent: <K extends keyof SiteContent>(key: K, data: SiteContent[K]) => Promise<Result>;
   updateTariffs: (newTariffs: TariffConfig) => void;
   updateSiteSettings: (updates: Partial<SiteSettings>) => void;
   updatePastureZone: (zoneId: string, updates: Partial<PastureZone>) => void;
@@ -153,6 +158,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [machineryCatalog, setMachineryCatalog] = useState<MachineryItem[]>(MACHINERY_CATALOG);
   const [pastureZones, setPastureZones] = useState<PastureZone[]>(PASTURE_ZONES);
   const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
+  const [content, setContent] = useState<SiteContent>(DEFAULT_CONTENT);
 
   // Админге гана жүктөлүүчү жеке маалымат
   const [subscribers, setSubscribers] = useState<SubscriberAccount[]>([]);
@@ -189,6 +195,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (machines.length) setMachineryCatalog(machines.map(m => ({ ...m.data, image: m.data.image?.replace(/^\/images\//, 'images/') })));
     if (zones.length) setPastureZones(zones.map(z => z.data));
     setTransactions(recent || []);
+    // Мазмун блоктору (003_content.sql иштетиле элек болсо — баштапкы тексттер калат)
+    try {
+      setContent(mergeContent(await db.select<{ key: string; data: unknown }>('content_blocks', 'select=key,data')));
+    } catch (e) {
+      console.warn('content_blocks:', e);
+    }
   }, []);
 
   const loadAdmin = useCallback(async () => {
@@ -376,6 +388,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     persist(db.insert('subscribers', toRow(newSub)));
   };
 
+  const addMachineryItem = (item: MachineryItem) => {
+    setMachineryCatalog(prev => [...prev, item]);
+    persist(db.insert('machinery', { id: item.id, data: item, sort: machineryCatalog.length }));
+  };
+
+  const deleteMachineryItem = (id: string) => {
+    setMachineryCatalog(prev => prev.filter(m => m.id !== id));
+    persist(db.remove('machinery', `id=eq.${enc(id)}`));
+  };
+
+  const updateContent = async <K extends keyof SiteContent>(key: K, data: SiteContent[K]): Promise<Result> => {
+    const prev = content[key];
+    setContent(c => ({ ...c, [key]: data }));
+    try {
+      await db.upsert('content_blocks', { key, data, updated_at: new Date().toISOString() });
+      return { ok: true };
+    } catch (e) {
+      setContent(c => ({ ...c, [key]: prev }));
+      const msg = errText(e);
+      return {
+        ok: false,
+        error: /content_blocks|schema cache|does not exist|даяр эмес/i.test(msg)
+          ? "Маалымат базасы даяр эмес: supabase/003_content.sql файлын Supabase'те иштетиңиз."
+          : msg
+      };
+    }
+  };
+
   const updateMachineryItem = (item: MachineryItem) => {
     setMachineryCatalog(prev => prev.map(m => (m.id === item.id ? item : m)));
     const sort = machineryCatalog.findIndex(m => m.id === item.id);
@@ -561,6 +601,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateSubscriber,
         addSubscriber,
         updateMachineryItem,
+        addMachineryItem,
+        deleteMachineryItem,
+        content,
+        updateContent,
         updateTariffs,
         updateSiteSettings,
         updatePastureZone,

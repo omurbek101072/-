@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { WASTE_SCHEDULE, SubscriberAccount } from '../types';
+import { SubscriberAccount } from '../types';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
 import { PhoneLink } from './PhoneLink';
@@ -32,7 +32,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
   onDirectPayment,
   onOpenCitizenRequest
 }) => {
-  const { tariffs, updateTariffs, siteSettings, isAdminLoggedIn, lookupSubscriber, submitMeterReading, createTicket } = useApp();
+  const { tariffs, updateTariffs, siteSettings, isAdminLoggedIn, lookupSubscriber, submitMeterReading, createTicket, content } = useApp();
   const [activeTab, setActiveTab] = useState<'water' | 'waste'>('water');
 
   // Calculator Sub-mode:
@@ -959,8 +959,8 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100">
-                    {WASTE_SCHEDULE.map((item, index) => (
-                      <tr key={index} className="hover:bg-stone-50/70 transition-colors">
+                    {content.wasteSchedule.map((item) => (
+                      <tr key={item.id} className="hover:bg-stone-50/70 transition-colors">
                         <td className="py-3 px-4 font-bold text-emerald-900 whitespace-nowrap">
                           {item.day}
                         </td>

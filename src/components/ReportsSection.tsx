@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { EditableText } from './EditableText';
 import { downloadDocument, DOC_MISSING_MESSAGE } from '../utils/documents';
+import { useApp } from '../context/AppContext';
 import { FileText, Download, CheckCircle2, TrendingUp, BarChart3, AlertCircle, Calendar, ShieldCheck } from 'lucide-react';
 
 export const ReportsSection: React.FC = () => {
@@ -12,23 +13,15 @@ export const ReportsSection: React.FC = () => {
     setTimeout(() => setDownloadNotice(null), 5000);
   };
 
-  const newsItems = [
-    {
-      date: '10-Октябрь, 2026',
-      title: 'Күзгү санитардык тазалоо жана жазгы суу түтүктөрүн жылуулоо иштери башталды',
-      desc: 'Айыл өкмөтү жана «Тазалык» ишканасы кышкы мезгилге даярдык көрүү максатында көчөлөрдү тазалоо жана суу колонкаларын тоңуудан сактоо иш-чараларын өткөрүүдө.'
-    },
-    {
-      date: '02-Октябрь, 2026',
-      title: 'Үч-Эмчек жайлоосунан малдарды түшүрүү жана жайыт отчетун кабыл алуу жыйыны',
-      desc: 'Жайыт комитетинин 2026-жылкы жайлоо сезону боюнча жыйынтыктоочу чогулушу айылдык клубда өтүп, малчылардын жана тургундардын сунуштары угулду.'
-    },
-    {
-      date: '25-Сентябрь, 2026',
-      title: 'Жаңы XCMG чынжыр тамандуу экскаватор ишке киргизилди',
-      desc: 'Айыл өкмөттүн өнүктүрүү фонду тарабынан сатылып алынган заманбап экскаватор эми тургундардын арык казуу жана курулуш иштерине толук кызмат көрсөтөт.'
-    }
-  ];
+  const { content } = useApp();
+  const { news, documents, budget, reception } = content;
+  const total = budget.items.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+  const pct = (n: number) => (total > 0 ? Math.round(((Number(n) || 0) / total) * 1000) / 10 : 0);
+  const barColor: Record<string, string> = {
+    cyan: 'bg-cyan-600', amber: 'bg-amber-600', emerald: 'bg-emerald-600',
+    indigo: 'bg-indigo-600', rose: 'bg-rose-600', stone: 'bg-stone-500'
+  };
+  const isExternal = (url: string) => /^https?:\/\//.test(url);
 
   return (
     <section id="reports" className="py-14 bg-stone-50 border-b border-stone-200">
@@ -65,59 +58,31 @@ export const ReportsSection: React.FC = () => {
           <div className="lg:col-span-7 bg-white rounded-2xl p-6 sm:p-7 border border-stone-200 shadow-sm space-y-6">
             <div className="flex items-center justify-between border-b border-stone-100 pb-4">
               <div>
-                <h3 className="text-base font-bold text-stone-900">
-                  2025-2026-жж. Бюджеттин аткарылышы
-                </h3>
-                <span className="text-xs text-stone-500">
-                  Жалпы кирешелер жана коммуналдык тейлөө чыгашалары
-                </span>
+                <h3 className="text-base font-bold text-stone-900">{budget.title}</h3>
+                <span className="text-xs text-stone-500">{budget.subtitle}</span>
               </div>
-              <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md">
-                Аудиттен өткөн
-              </span>
+              {budget.badge && (
+                <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md">
+                  {budget.badge}
+                </span>
+              )}
             </div>
 
-            {/* Income breakdown bar simulation */}
+            {/* Income breakdown bars */}
             <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-xs font-semibold text-stone-800 mb-1">
-                  <span>Таза суу төлөмдөрү (водомер + калк)</span>
-                  <span className="font-mono text-emerald-700">1,820,000 сом (42%)</span>
+              {budget.items.map(item => (
+                <div key={item.id}>
+                  <div className="flex justify-between gap-3 text-xs font-semibold text-stone-800 mb-1">
+                    <span>{item.label}</span>
+                    <span className="font-mono text-emerald-700 shrink-0">
+                      {(Number(item.amount) || 0).toLocaleString('ru-RU')} сом ({pct(item.amount)}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-stone-100 rounded-full h-2">
+                    <div className={`${barColor[item.color] || 'bg-emerald-600'} h-2 rounded-full`} style={{ width: `${pct(item.amount)}%` }} />
+                  </div>
                 </div>
-                <div className="w-full bg-stone-100 rounded-full h-2">
-                  <div className="bg-cyan-600 h-2 rounded-full" style={{ width: '42%' }} />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs font-semibold text-stone-800 mb-1">
-                  <span>Жайыт пайдалануу жыйымдары</span>
-                  <span className="font-mono text-emerald-700">1,485,600 сом (34%)</span>
-                </div>
-                <div className="w-full bg-stone-100 rounded-full h-2">
-                  <div className="bg-amber-600 h-2 rounded-full" style={{ width: '34%' }} />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs font-semibold text-stone-800 mb-1">
-                  <span>Катуу калдыктар (таштанды ташуу)</span>
-                  <span className="font-mono text-emerald-700">540,000 сом (13%)</span>
-                </div>
-                <div className="w-full bg-stone-100 rounded-full h-2">
-                  <div className="bg-emerald-600 h-2 rounded-full" style={{ width: '13%' }} />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs font-semibold text-stone-800 mb-1">
-                  <span>Атайын техниканы ижарага берүүдөн түшкөн киреше</span>
-                  <span className="font-mono text-emerald-700">460,000 сом (11%)</span>
-                </div>
-                <div className="w-full bg-stone-100 rounded-full h-2">
-                  <div className="bg-indigo-600 h-2 rounded-full" style={{ width: '11%' }} />
-                </div>
-              </div>
+              ))}
             </div>
 
             {/* Totals */}
@@ -125,13 +90,13 @@ export const ReportsSection: React.FC = () => {
               <div>
                 <span className="text-stone-500 block text-[11px]">Жалпы жылдык жыйым:</span>
                 <span className="text-xl font-extrabold text-stone-900 font-mono tabular-nums">
-                  4,305,600 сом
+                  {total.toLocaleString('ru-RU')} сом
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-stone-500 block text-[11px]">Инфраструктурага сарпталган:</span>
+                <span className="text-stone-500 block text-[11px]">{budget.spentLabel}:</span>
                 <span className="text-sm font-bold text-emerald-800 font-mono tabular-nums">
-                  3,980,200 сом (92.4%)
+                  {(Number(budget.spent) || 0).toLocaleString('ru-RU')} сом ({pct(budget.spent)}%)
                 </span>
               </div>
             </div>
@@ -142,11 +107,8 @@ export const ReportsSection: React.FC = () => {
                 Жүктөп алууга жеткиликтүү расмий документтер:
               </h4>
               <div className="space-y-2">
-                {[
-                  { name: '«Тазалык» МИ 2025-жылдык толук финансылык отчету.pdf', file: '/docs/finansy-otchet-2025.pdf' },
-                  { name: 'Айылдык Кеңештин тарифтер жөнүндө Токтому (№14-2026).pdf', file: '/docs/tarif-toktom-14-2026.pdf' },
-                  { name: 'Жайыт пайдалануучулар бирикмесинин планы жана сметасы.pdf', file: '/docs/jayyt-plan-smeta.pdf' }
-                ].map((doc, idx) => (
+                {documents.length === 0 && <p className="text-[11px] text-stone-400">Азырынча документ жок</p>}
+                {documents.map((doc, idx) => (
                   <div
                     key={idx}
                     className="p-3 rounded-xl border border-stone-200 bg-stone-50/50 flex items-center justify-between gap-2 text-xs"
@@ -160,14 +122,26 @@ export const ReportsSection: React.FC = () => {
                         <span className="text-[10px] text-stone-400 font-mono">PDF</span>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDownload(doc.name, doc.file)}
-                      className="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-white border border-stone-200 rounded-lg hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Жүктөө</span>
-                    </button>
+                    {isExternal(doc.url) ? (
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-white border border-stone-200 rounded-lg hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Ачуу</span>
+                      </a>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleDownload(doc.name + '.pdf', doc.url)}
+                        className="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-white border border-stone-200 rounded-lg hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Жүктөө</span>
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -185,15 +159,19 @@ export const ReportsSection: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                {newsItems.map((item, i) => (
-                  <div key={i} className="border-b border-stone-100 pb-4 last:border-b-0 last:pb-0">
+                {news.length === 0 && <p className="text-[11px] text-stone-400">Азырынча жаңылык жок</p>}
+                {news.map((item) => (
+                  <div key={item.id} className="border-b border-stone-100 pb-4 last:border-b-0 last:pb-0">
+                    {item.image && (
+                      <img src={item.image} alt="" loading="lazy" className="w-full max-h-48 object-cover rounded-lg mb-2 border border-stone-100" />
+                    )}
                     <span className="text-[10px] font-mono text-emerald-700 font-semibold block">
                       {item.date}
                     </span>
                     <h4 className="text-xs font-bold text-stone-900 mt-0.5 leading-snug">
                       {item.title}
                     </h4>
-                    <p className="text-[11px] text-stone-500 mt-1 leading-relaxed">
+                    <p className="text-[11px] text-stone-500 mt-1 leading-relaxed whitespace-pre-line">
                       {item.desc}
                     </p>
                   </div>
@@ -204,14 +182,14 @@ export const ReportsSection: React.FC = () => {
             {/* Public Reception Hotline Card */}
             <div className="p-5 rounded-2xl bg-emerald-950 text-white text-xs space-y-3">
               <span className="text-[11px] text-emerald-400 font-semibold uppercase tracking-wider block">
-                Коомдук кабыл алуу жана байланыш
+                {reception.title}
               </span>
-              <p className="text-stone-300 leading-relaxed text-xs">
-                Жарандардын арыздары жана сунуштары боюнча ишкананын жетекчиси аптанын шаршемби күндөрү саат 10:00дөн 13:00гө чейин жеке кабыл алат.
-              </p>
-              <div className="pt-2 border-t border-emerald-900 font-mono text-emerald-200 text-xs">
-                Дарек: Айыл өкмөтүнүн имараты, 1-кабат, 104-кабинет
-              </div>
+              <p className="text-stone-300 leading-relaxed text-xs whitespace-pre-line">{reception.text}</p>
+              {reception.address && (
+                <div className="pt-2 border-t border-emerald-900 font-mono text-emerald-200 text-xs">
+                  Дарек: {reception.address}
+                </div>
+              )}
             </div>
           </div>
         </div>

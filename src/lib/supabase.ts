@@ -180,6 +180,12 @@ export const db = {
       body: JSON.stringify(values)
     });
   },
+  remove(table: string, filter: string): Promise<void> {
+    return request<void>(`/rest/v1/${table}?${filter}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' }
+    });
+  },
   rpc<T>(fn: string, args: object = {}): Promise<T> {
     return request<T>(`/rest/v1/rpc/${fn}`, { method: 'POST', body: JSON.stringify(args) });
   }
@@ -324,3 +330,44 @@ export const auth = {
     return !!redirectUrl();
   }
 };
+
+// ---------- Сүрөт жана PDF жүктөө (Supabase Storage, "media" папкасы) ----------
+export const MEDIA_BUCKET = 'media';
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+export function publicMediaUrl(path: string): string {
+  return `${SUPABASE_URL}/storage/v1/object/public/${MEDIA_BUCKET}/${path}`;
+}
+
+export async function uploadMedia(file: Blob, path: string, contentType: string): Promise<string> {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new ApiError('Файл өтө чоң (10 МБдан ашпашы керек).', 413);
+  }
+  let res: Response;
+  try {
+    res = await fetch(`${SUPABASE_URL}/storage/v1/object/${MEDIA_BUCKET}/${path}`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: await authHeader(),
+        'Content-Type': contentType,
+        'x-upsert': 'true',
+        'cache-control': '31536000'
+      },
+      body: file
+    });
+  } catch {
+    throw new ApiError('Сервер менен байланыш жок. Интернетти текшериңиз.', 0);
+  }
+  if (!res.ok) {
+    const err = await parseError(res);
+    if (/bucket not found/i.test(err.message)) {
+      throw new ApiError("Файл сактагычы даяр эмес: supabase/003_content.sql файлын Supabase'те иштетиңиз.", res.status);
+    }
+    if (/mime|type.*not supported/i.test(err.message)) {
+      throw new ApiError('Бул файлдын түрү кабыл алынбайт. Сүрөт (JPG, PNG, WEBP) же PDF тандаңыз.', res.status);
+    }
+    throw err;
+  }
+  return publicMediaUrl(path);
+}

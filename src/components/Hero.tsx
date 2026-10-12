@@ -14,14 +14,14 @@ export const Hero: React.FC<HeroProps> = ({
   onOpenQuickPayment,
   onOpenCitizenRequest
 }) => {
-  const { siteSettings } = useApp();
+  const { siteSettings, content } = useApp();
 
   return (
     <section className="relative overflow-hidden bg-stone-900 text-white">
       {/* Background Hero Image with measured scrim */}
       <div className="absolute inset-0 z-0">
         <img
-          src="images/tazalyk_hero_village_1791715414641.jpg"
+          src={content.images.hero}
           alt="Кыргыз айылынын көрүнүшү жана таза көчөлөрү"
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000"
@@ -71,22 +71,12 @@ export const Hero: React.FC<HeroProps> = ({
 
           {/* Trust stats strip */}
           <div className="mt-12 pt-6 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-4 text-left">
-            <div>
-              <div className="text-2xl font-extrabold text-white font-mono tabular-nums">1,240+</div>
-              <div className="text-xs text-stone-400 mt-0.5">Тейленген үй чарба</div>
-            </div>
-            <div>
-              <div className="text-2xl font-extrabold text-white font-mono tabular-nums">24 / 7</div>
-              <div className="text-xs text-stone-400 mt-0.5">Авариялык диспетчер</div>
-            </div>
-            <div>
-              <div className="text-2xl font-extrabold text-white font-mono tabular-nums">6 бирдик</div>
-              <div className="text-xs text-stone-400 mt-0.5">Муниципалдык техника</div>
-            </div>
-            <div>
-              <div className="text-2xl font-extrabold text-white font-mono tabular-nums">10,400 га</div>
-              <div className="text-xs text-stone-400 mt-0.5">Көзөмөлдөгү жайыттар</div>
-            </div>
+            {content.heroStats.map(stat => (
+              <div key={stat.id}>
+                <div className="text-2xl font-extrabold text-white font-mono tabular-nums">{stat.value}</div>
+                <div className="text-xs text-stone-400 mt-0.5">{stat.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
