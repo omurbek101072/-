@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { EditableText } from './EditableText';
+import { T, SectionEditButton } from './AdminInline';
 import { downloadDocument, DOC_MISSING_MESSAGE } from '../utils/documents';
 import { useApp } from '../context/AppContext';
 import { FileText, Download, CheckCircle2, TrendingUp, BarChart3, AlertCircle, Calendar, ShieldCheck } from 'lucide-react';
@@ -30,7 +31,7 @@ export const ReportsSection: React.FC = () => {
         <div className="max-w-3xl mb-10">
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 uppercase tracking-wider">
             <FileText className="w-4 h-4" />
-            <span>Ачык өкмөт · Финансылык айкындуулук</span>
+            <span><T>Ачык өкмөт · Финансылык айкындуулук</T></span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 mt-1" style={{ textWrap: 'balance' }}>
             <EditableText settingKey="reportsSectionTitle" label="Отчеттор бөлүмү башкы аталышы" />
@@ -47,7 +48,7 @@ export const ReportsSection: React.FC = () => {
               <span>{downloadNotice}</span>
             </div>
             <button onClick={() => setDownloadNotice(null)} className="text-stone-500 hover:text-stone-800">
-              Жабуу
+              <T>Жабуу</T>
             </button>
           </div>
         )}
@@ -61,6 +62,7 @@ export const ReportsSection: React.FC = () => {
                 <h3 className="text-base font-bold text-stone-900">{budget.title}</h3>
                 <span className="text-xs text-stone-500">{budget.subtitle}</span>
               </div>
+              <SectionEditButton tab="budget" label="Бюджетти өзгөртүү" title="Бюджет жана коомдук кабыл алуу" />
               {budget.badge && (
                 <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md">
                   {budget.badge}
@@ -88,7 +90,7 @@ export const ReportsSection: React.FC = () => {
             {/* Totals */}
             <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 flex items-center justify-between text-xs">
               <div>
-                <span className="text-stone-500 block text-[11px]">Жалпы жылдык жыйым:</span>
+                <span className="text-stone-500 block text-[11px]"><T>Жалпы жылдык жыйым:</T></span>
                 <span className="text-xl font-extrabold text-stone-900 font-mono tabular-nums">
                   {total.toLocaleString('ru-RU')} сом
                 </span>
@@ -103,11 +105,14 @@ export const ReportsSection: React.FC = () => {
 
             {/* Official Files download grid */}
             <div>
-              <h4 className="text-xs font-bold text-stone-900 mb-2">
-                Жүктөп алууга жеткиликтүү расмий документтер:
-              </h4>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <h4 className="text-xs font-bold text-stone-900">
+                  <T>Жүктөп алууга жеткиликтүү расмий документтер:</T>
+                </h4>
+                <SectionEditButton tab="documents" label="Документтерди өзгөртүү / PDF кошуу" title="Документтер" />
+              </div>
               <div className="space-y-2">
-                {documents.length === 0 && <p className="text-[11px] text-stone-400">Азырынча документ жок</p>}
+                {documents.length === 0 && <p className="text-[11px] text-stone-400"><T>Азырынча документ жок</T></p>}
                 {documents.map((doc, idx) => (
                   <div
                     key={idx}
@@ -130,7 +135,7 @@ export const ReportsSection: React.FC = () => {
                         className="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-white border border-stone-200 rounded-lg hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
                       >
                         <Download className="w-3.5 h-3.5" />
-                        <span>Ачуу</span>
+                        <span><T>Ачуу</T></span>
                       </a>
                     ) : (
                       <button
@@ -139,7 +144,7 @@ export const ReportsSection: React.FC = () => {
                         className="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-white border border-stone-200 rounded-lg hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
                       >
                         <Download className="w-3.5 h-3.5" />
-                        <span>Жүктөө</span>
+                        <span><T>Жүктөө</T></span>
                       </button>
                     )}
                   </div>
@@ -151,15 +156,16 @@ export const ReportsSection: React.FC = () => {
           {/* News & Announcements (5 cols) */}
           <div className="lg:col-span-5 space-y-4">
             <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm space-y-4">
-              <div className="border-b border-stone-100 pb-3">
+              <div className="border-b border-stone-100 pb-3 flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-bold text-stone-900 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-emerald-700" />
-                  <span>Кулактандыруулар жана жаңылыктар</span>
+                  <span><T>Кулактандыруулар жана жаңылыктар</T></span>
                 </h3>
+                <SectionEditButton tab="news" label="Жаңылык кошуу / өзгөртүү" title="Жаңылыктар" />
               </div>
 
               <div className="space-y-4">
-                {news.length === 0 && <p className="text-[11px] text-stone-400">Азырынча жаңылык жок</p>}
+                {news.length === 0 && <p className="text-[11px] text-stone-400"><T>Азырынча жаңылык жок</T></p>}
                 {news.map((item) => (
                   <div key={item.id} className="border-b border-stone-100 pb-4 last:border-b-0 last:pb-0">
                     {item.image && (
@@ -181,13 +187,14 @@ export const ReportsSection: React.FC = () => {
 
             {/* Public Reception Hotline Card */}
             <div className="p-5 rounded-2xl bg-emerald-950 text-white text-xs space-y-3">
+              <SectionEditButton tab="budget" label="Бул блокту өзгөртүү" title="Бюджет жана коомдук кабыл алуу" />
               <span className="text-[11px] text-emerald-400 font-semibold uppercase tracking-wider block">
                 {reception.title}
               </span>
               <p className="text-stone-300 leading-relaxed text-xs whitespace-pre-line">{reception.text}</p>
               {reception.address && (
                 <div className="pt-2 border-t border-emerald-900 font-mono text-emerald-200 text-xs">
-                  Дарек: {reception.address}
+                  <T>Дарек:</T> {reception.address}
                 </div>
               )}
             </div>

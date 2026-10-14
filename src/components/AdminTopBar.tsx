@@ -39,10 +39,10 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({ onOpenAdminPanel }) =>
                 ? 'bg-amber-400 text-stone-950 font-bold shadow-xs'
                 : 'bg-stone-800 text-stone-300 hover:text-white hover:bg-stone-700'
             }`}
-            title="Башкы беттеги аталыштарды түздөн-түз өзгөртүү"
+            title="Күйүк болсо — сайттын ар бир бөлүмүндө сары «Өзгөртүү» баскычтары жана ✎ белгилери көрүнөт"
           >
             <Edit3 className="w-3.5 h-3.5 text-amber-500" />
-            <span>Түз түзөтүү: {isEditModeActive ? 'КҮЙГҮЗҮЛГӨН' : 'ӨЧҮК'}</span>
+            <span>Сайтты түз өзгөртүү: {isEditModeActive ? 'КҮЙҮК' : 'ӨЧҮК'}</span>
           </button>
 
           {/* Open Full Admin Panel */}

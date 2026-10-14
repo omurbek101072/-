@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import { SiteSettings } from '../data/mockData';
 import { Edit3, Check, X, ShieldAlert } from 'lucide-react';
@@ -45,9 +46,21 @@ export const EditableText: React.FC<EditableTextProps> = ({
 
       {/* Admin Quick Edit Pencil (visible only to logged-in administrator) */}
       {(isEditModeActive || isEditing) && (
-        <button
-          type="button"
-          onClick={() => {
+        <span
+          role="button"
+          tabIndex={0}
+          data-inline-edit="text"
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              setCurrentVal(String(siteSettings[settingKey] || ''));
+              setIsEditing(true);
+            }
+          }}
+          onClick={e => {
+            e.preventDefault();
+            e.stopPropagation();
             setCurrentVal(String(siteSettings[settingKey] || ''));
             setIsEditing(true);
           }}
@@ -56,14 +69,19 @@ export const EditableText: React.FC<EditableTextProps> = ({
         >
           <Edit3 className="w-2.5 h-2.5" />
           <span>Өзгөртүү</span>
-        </button>
+        </span>
       )}
 
       {/* Inline Edit Modal / Popover */}
-      {isEditing && (
+      {isEditing && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
-          onClick={handleCancel}
+          className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs text-left font-sans normal-case tracking-normal"
+          onClick={e => {
+            e.stopPropagation();
+            handleCancel();
+          }}
+          onSubmit={e => e.stopPropagation()}
+          onKeyDown={e => e.stopPropagation()}
         >
           <div
             className="bg-white rounded-2xl p-5 max-w-lg w-full border border-stone-300 shadow-2xl text-stone-900 space-y-3"
@@ -125,7 +143,8 @@ export const EditableText: React.FC<EditableTextProps> = ({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </span>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 import { Droplets, Trash2, Mountain, Truck, CreditCard, ArrowRight } from 'lucide-react';
 import { EditableText } from './EditableText';
+import { T, SectionEditButton } from './AdminInline';
 
 interface HeroProps {
   onSelectService: (serviceTab: string) => void;
@@ -31,6 +32,7 @@ export const Hero: React.FC<HeroProps> = ({
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-14 lg:py-20">
         <div className="max-w-3xl">
+          <SectionEditButton tab="home" label="Фон сүрөтүн жана сандарды өзгөртүү" title="Башкы беттин сүрөтү жана сандары" className="mb-4" />
           {/* Unboxed metadata kicker */}
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 tracking-wide uppercase mb-3">
             <EditableText settingKey="heroKicker" label="Башкы сап (Kicker)" />
@@ -50,14 +52,14 @@ export const Hero: React.FC<HeroProps> = ({
               className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-950/40 transition-all text-sm cursor-pointer"
             >
               <CreditCard className="w-4 h-4" />
-              <span>Онлайн төлөм жүргүзүү</span>
+              <span><T>Онлайн төлөм жүргүзүү</T></span>
             </button>
 
             <button
               onClick={() => onSelectService('water-waste')}
               className="flex items-center gap-2 px-5 py-3 bg-white/10 hover:bg-white/20 text-white border border-white/20 font-semibold rounded-xl backdrop-blur-sm transition-all text-sm cursor-pointer"
             >
-              <span>Кызматтар жана график</span>
+              <span><T>Кызматтар жана график</T></span>
               <ArrowRight className="w-4 h-4" />
             </button>
 
@@ -65,7 +67,7 @@ export const Hero: React.FC<HeroProps> = ({
               onClick={onOpenCitizenRequest}
               className="px-4 py-3 text-stone-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
             >
-              Авариялык билдирүү жөнөтүү
+              <T>Авариялык билдирүү жөнөтүү</T>
             </button>
           </div>
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { T } from './AdminInline';
 import { SubscriberAccount, PaymentTransaction } from '../types';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
@@ -215,7 +216,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
         {/* Section title */}
         <div className="max-w-3xl mb-8">
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 uppercase tracking-wider">
-            <span>Санариптик кызматтар</span>
+            <span><T>Санариптик кызматтар</T></span>
             <span aria-hidden="true">·</span>
             <span>24/7 Коопсуз төлөмдөр</span>
           </div>
@@ -231,8 +232,8 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
           <div className="mb-6 p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-semibold flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
             <span>
-              Демо режим: онлайн төлөм азырынча банкка туташтырыла элек, чыныгы акча которулбайт.
-              Төлөө үчүн ишкананын кассасына же банк реквизиттери аркылуу кайрылыңыз.
+              <T>Демо режим: онлайн төлөм азырынча банкка туташтырыла элек, чыныгы акча которулбайт.
+              Төлөө үчүн ишкананын кассасына же банк реквизиттери аркылуу кайрылыңыз.</T>
             </span>
           </div>
         )}
@@ -247,7 +248,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
               onClick={() => setPaymentSuccessNotice(null)}
               className="text-xs font-bold text-emerald-700 hover:text-emerald-900 cursor-pointer"
             >
-              Жабуу
+              <T>Жабуу</T>
             </button>
           </div>
         )}
@@ -259,7 +260,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
             <div className="bg-white rounded-2xl p-5 border border-stone-200/90 shadow-sm">
               <h3 className="text-sm font-bold text-stone-900 mb-3 flex items-center justify-between">
                 <span>1. Лицевой эсеп номери боюнча издөө</span>
-                <span className="text-[11px] text-stone-400 font-normal">Квитанциядагы номер</span>
+                <span className="text-[11px] text-stone-400 font-normal"><T>Квитанциядагы номер</T></span>
               </h3>
               
               <form onSubmit={handleSearch} className="flex gap-2">
@@ -289,14 +290,14 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
 
               {searchNotFound && (
                 <p className="mt-2 text-[11px] text-rose-600 font-semibold">
-                  Мындай эсеп номери табылган жок. Квитанциядагы номерди текшериңиз.
+                  <T>Мындай эсеп номери табылган жок. Квитанциядагы номерди текшериңиз.</T>
                 </p>
               )}
 
               {/* Абоненттердин тизмеси администраторго гана көрүнөт */}
               {isAdminLoggedIn && (
               <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs">
-                <span className="text-stone-400 text-[11px]">Абоненттер (админ):</span>
+                <span className="text-stone-400 text-[11px]"><T>Абоненттер (админ):</T></span>
                 {subscribers.map(s => (
                   <button
                     key={s.id}
@@ -329,7 +330,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                   <div>
                     <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
                       <UserCheck className="w-4 h-4" />
-                      <span>Абоненттин жеке эсеби табылды</span>
+                      <span><T>Абоненттин жеке эсеби табылды</T></span>
                     </div>
                     <h4 className="text-base font-bold text-stone-900 mt-1">
                       {isAdminLoggedIn ? selectedSubscriber.fullName : maskName(selectedSubscriber.fullName)}
@@ -345,11 +346,11 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                       onClick={handleClearSubscriber}
                       className="mt-1 text-[11px] font-semibold text-stone-500 hover:text-rose-600 underline cursor-pointer"
                     >
-                      Башка эсеп тандоо
+                      <T>Башка эсеп тандоо</T>
                     </button>
                   </div>
                   <div className="text-right">
-                    <span className="text-[11px] text-stone-400 uppercase block font-mono">Лицевой эсеп</span>
+                    <span className="text-[11px] text-stone-400 uppercase block font-mono"><T>Лицевой эсеп</T></span>
                     <span className="text-lg font-extrabold text-stone-900 font-mono">№{selectedSubscriber.id}</span>
                   </div>
                 </div>
@@ -361,9 +362,9 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                     serviceType === 'water' ? 'border-cyan-500 bg-cyan-50/50' : 'border-stone-200 bg-stone-50'
                   }`}>
                     <div>
-                      <div className="font-bold text-stone-800">Таза суу балансы</div>
+                      <div className="font-bold text-stone-800"><T>Таза суу балансы</T></div>
                       <div className="text-[11px] text-stone-500 mt-0.5">
-                        Акыркы көрсөткүч: <strong className="font-mono text-stone-700">{selectedSubscriber.waterLastMeterReading} м³</strong> ({selectedSubscriber.waterTariffPerM3} с/м³)
+                        <T>Акыркы көрсөткүч:</T> <strong className="font-mono text-stone-700">{selectedSubscriber.waterLastMeterReading} м³</strong> ({selectedSubscriber.waterTariffPerM3} с/м³)
                       </div>
                     </div>
                     <div className="text-right">
@@ -379,7 +380,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                         onClick={() => handleServiceChange('water')}
                         className="text-[11px] font-semibold text-emerald-700 hover:underline mt-0.5 cursor-pointer"
                       >
-                        Төлөөгө тандоо
+                        <T>Төлөөгө тандоо</T>
                       </button>
                     </div>
                   </div>
@@ -389,9 +390,9 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                     serviceType === 'waste' ? 'border-emerald-500 bg-emerald-50/50' : 'border-stone-200 bg-stone-50'
                   }`}>
                     <div>
-                      <div className="font-bold text-stone-800">Таштанды чыгаруу балансы</div>
+                      <div className="font-bold text-stone-800"><T>Таштанды чыгаруу балансы</T></div>
                       <div className="text-[11px] text-stone-500 mt-0.5">
-                        Үй-бүлө: <strong className="font-mono text-stone-700">{selectedSubscriber.wasteFamilyMembers} адам</strong> ({selectedSubscriber.wasteTariffPerPerson} с/адам)
+                        <T>Үй-бүлө:</T> <strong className="font-mono text-stone-700">{selectedSubscriber.wasteFamilyMembers} адам</strong> ({selectedSubscriber.wasteTariffPerPerson} с/адам)
                       </div>
                     </div>
                     <div className="text-right">
@@ -407,7 +408,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                         onClick={() => handleServiceChange('waste')}
                         className="text-[11px] font-semibold text-emerald-700 hover:underline mt-0.5 cursor-pointer"
                       >
-                        Төлөөгө тандоо
+                        <T>Төлөөгө тандоо</T>
                       </button>
                     </div>
                   </div>
@@ -417,9 +418,9 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                     serviceType === 'pasture' ? 'border-amber-500 bg-amber-50/50' : 'border-stone-200 bg-stone-50'
                   }`}>
                     <div>
-                      <div className="font-bold text-stone-800">Жайыт пайдалануу акысы</div>
+                      <div className="font-bold text-stone-800"><T>Жайыт пайдалануу акысы</T></div>
                       <div className="text-[11px] text-stone-500 mt-0.5">
-                        Катталган мал: {selectedSubscriber.registeredLivestock.cattle} уй, {selectedSubscriber.registeredLivestock.horses} жылкы, {selectedSubscriber.registeredLivestock.sheepGoats} кой
+                        <T>Катталган мал:</T> {selectedSubscriber.registeredLivestock.cattle} уй, {selectedSubscriber.registeredLivestock.horses} жылкы, {selectedSubscriber.registeredLivestock.sheepGoats} кой
                       </div>
                     </div>
                     <div className="text-right">
@@ -435,7 +436,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                         onClick={() => handleServiceChange('pasture')}
                         className="text-[11px] font-semibold text-amber-700 hover:underline mt-0.5 cursor-pointer"
                       >
-                        Төлөөгө тандоо
+                        <T>Төлөөгө тандоо</T>
                       </button>
                     </div>
                   </div>
@@ -445,10 +446,10 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-amber-900 text-xs space-y-2">
                 <div className="font-bold flex items-center gap-1.5 text-sm">
                   <AlertCircle className="w-4 h-4 text-amber-600" />
-                  <span>Лицевой эсеп тандалган жок</span>
+                  <span><T>Лицевой эсеп тандалган жок</T></span>
                 </div>
                 <p>
-                  Эгерде эсеп номериңизди билбесеңиз, оң жактагы формага аты-жөнүңүздү жана кызматты тандап түз төлөңүз.
+                  <T>Эгерде эсеп номериңизди билбесеңиз, оң жактагы формага аты-жөнүңүздү жана кызматты тандап түз төлөңүз.</T>
                 </p>
               </div>
             )}
@@ -457,8 +458,8 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
             <div className="p-4 rounded-xl bg-white border border-stone-200 text-xs text-stone-500 flex items-center gap-3">
               <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0" />
               <div>
-                <p className="font-semibold text-stone-800">Жеке маалыматтар корголот</p>
-                <p className="text-[11px]">Эсеп так номери боюнча гана табылат, аты-жөнү жана телефону толук көрсөтүлбөйт.</p>
+                <p className="font-semibold text-stone-800"><T>Жеке маалыматтар корголот</T></p>
+                <p className="text-[11px]"><T>Эсеп так номери боюнча гана табылат, аты-жөнү жана телефону толук көрсөтүлбөйт.</T></p>
               </div>
             </div>
           </div>
@@ -467,7 +468,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
           <div className="lg:col-span-7 bg-white rounded-2xl p-6 sm:p-7 border border-stone-200/90 shadow-sm space-y-6">
             <div>
               <h3 className="text-base font-bold text-stone-900">2. Кызматты жана төлөм суммасын тандоо</h3>
-              <p className="text-xs text-stone-500 mt-0.5">Керектүү багытты басып, сумманы тактаңыз</p>
+              <p className="text-xs text-stone-500 mt-0.5"><T>Керектүү багытты басып, сумманы тактаңыз</T></p>
             </div>
 
             {/* Service selector segmented tabs */}
@@ -481,8 +482,8 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                     : 'border-stone-200 hover:border-stone-300 text-stone-700 bg-stone-50/50'
                 }`}
               >
-                <span className="block text-xs font-semibold">Таза суу</span>
-                <span className="block text-[11px] text-stone-500 font-normal mt-0.5">Водомер / норма</span>
+                <span className="block text-xs font-semibold"><T>Таза суу</T></span>
+                <span className="block text-[11px] text-stone-500 font-normal mt-0.5"><T>Водомер / норма</T></span>
               </button>
 
               <button
@@ -494,7 +495,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                     : 'border-stone-200 hover:border-stone-300 text-stone-700 bg-stone-50/50'
                 }`}
               >
-                <span className="block text-xs font-semibold">Таштанды</span>
+                <span className="block text-xs font-semibold"><T>Таштанды</T></span>
                 <span className="block text-[11px] text-stone-500 font-normal mt-0.5">35 сом/адам</span>
               </button>
 
@@ -507,8 +508,8 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                     : 'border-stone-200 hover:border-stone-300 text-stone-700 bg-stone-50/50'
                 }`}
               >
-                <span className="block text-xs font-semibold">Жайыт акысы</span>
-                <span className="block text-[11px] text-stone-500 font-normal mt-0.5">Мал башына</span>
+                <span className="block text-xs font-semibold"><T>Жайыт акысы</T></span>
+                <span className="block text-[11px] text-stone-500 font-normal mt-0.5"><T>Мал башына</T></span>
               </button>
 
               <button
@@ -520,15 +521,15 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                     : 'border-stone-200 hover:border-stone-300 text-stone-700 bg-stone-50/50'
                 }`}
               >
-                <span className="block text-xs font-semibold">Техника ижарасы</span>
-                <span className="block text-[11px] text-stone-500 font-normal mt-0.5">Экскаватор/КамАЗ</span>
+                <span className="block text-xs font-semibold"><T>Техника ижарасы</T></span>
+                <span className="block text-[11px] text-stone-500 font-normal mt-0.5"><T>Экскаватор/КамАЗ</T></span>
               </button>
             </div>
 
             {/* Payer info inputs (if not selected subscriber) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
-                <label className="block font-semibold text-stone-700 mb-1">Төлөөчүнүн аты-жөнү:</label>
+                <label className="block font-semibold text-stone-700 mb-1"><T>Төлөөчүнүн аты-жөнү:</T></label>
                 <input
                   type="text"
                   value={customPayerName}
@@ -539,7 +540,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
               </div>
 
               <div>
-                <label className="block font-semibold text-stone-700 mb-1">Байланыш телефону (SMS чек үчүн):</label>
+                <label className="block font-semibold text-stone-700 mb-1"><T>Байланыш телефону (SMS чек үчүн):</T></label>
                 <input
                   type="text"
                   value={customPayerPhone}
@@ -554,7 +555,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
             {/* Amount input & Quick Chips */}
             <div>
               <label className="block text-xs font-semibold text-stone-700 mb-1">
-                Төлөнүүчү сумма (сом):
+                <T>Төлөнүүчү сумма (сом):</T>
               </label>
               <div className="flex items-center gap-3">
                 <div className="relative flex-1">
@@ -581,7 +582,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
 
               {/* Quick Sum presets */}
               <div className="flex flex-wrap items-center gap-2 mt-2">
-                <span className="text-[11px] text-stone-400">Тез тандоо:</span>
+                <span className="text-[11px] text-stone-400"><T>Тез тандоо:</T></span>
                 {[105, 240, 500, 1000, 2000, 5000].map(val => (
                   <button
                     key={val}
@@ -597,7 +598,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
 
             {/* Payment Details Input */}
             <div>
-              <label className="block text-xs font-semibold text-stone-700 mb-1">Төлөм баяндамасы:</label>
+              <label className="block text-xs font-semibold text-stone-700 mb-1"><T>Төлөм баяндамасы:</T></label>
               <input
                 type="text"
                 value={paymentDetails}
@@ -654,9 +655,9 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                     {paymentMethod} аркылуу тез төлөө
                   </div>
                   <p className="text-[11px] text-stone-500 mt-0.5">
-                    Сумма: <strong className="font-mono text-emerald-700 text-sm">{(customAmount || 0).toLocaleString('ru-RU')} сом</strong>
+                    <T>Сумма:</T> <strong className="font-mono text-emerald-700 text-sm">{(customAmount || 0).toLocaleString('ru-RU')} сом</strong>
                   </p>
-                  <p className="text-[10px] text-stone-400">Комиссия: 0 сом (айыл өкмөтү тарабынан субсидияланган)</p>
+                  <p className="text-[10px] text-stone-400"><T>Комиссия: 0 сом (айыл өкмөтү тарабынан субсидияланган)</T></p>
                 </div>
               </div>
 
@@ -669,7 +670,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                 {isProcessing ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Төлөм аткарылууда...</span>
+                    <span><T>Төлөм аткарылууда...</T></span>
                   </>
                 ) : (
                   <>
@@ -688,12 +689,12 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 uppercase tracking-wider">
                 <History className="w-4 h-4" />
-                <span>Ачык финансылык реестр</span>
+                <span><T>Ачык финансылык реестр</T></span>
               </div>
-              <h3 className="text-lg font-bold text-stone-900 mt-0.5">Акыркы төлөнгөн квитанциялар</h3>
+              <h3 className="text-lg font-bold text-stone-900 mt-0.5"><T>Акыркы төлөнгөн квитанциялар</T></h3>
             </div>
             <span className="text-xs text-stone-500">
-              Төлөм жасалгандан кийин электрондук чек автоматтык түрдө жаралат
+              <T>Төлөм жасалгандан кийин электрондук чек автоматтык түрдө жаралат</T>
             </span>
           </div>
 
@@ -701,19 +702,19 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
             <table className="w-full text-left text-xs text-stone-700">
               <thead className="bg-stone-50 text-stone-500 uppercase tracking-wider text-[11px] border-y border-stone-200">
                 <tr>
-                  <th className="py-2.5 px-3">Квитанция №</th>
-                  <th className="py-2.5 px-3">Убактысы</th>
-                  <th className="py-2.5 px-3">Төлөөчү</th>
-                  <th className="py-2.5 px-3">Кызмат</th>
-                  <th className="py-2.5 px-3">Ыкмасы</th>
-                  <th className="py-2.5 px-3 text-right">Суммасы</th>
-                  <th className="py-2.5 px-3 text-center">Аракет</th>
+                  <th className="py-2.5 px-3"><T>Квитанция №</T></th>
+                  <th className="py-2.5 px-3"><T>Убактысы</T></th>
+                  <th className="py-2.5 px-3"><T>Төлөөчү</T></th>
+                  <th className="py-2.5 px-3"><T>Кызмат</T></th>
+                  <th className="py-2.5 px-3"><T>Ыкмасы</T></th>
+                  <th className="py-2.5 px-3 text-right"><T>Суммасы</T></th>
+                  <th className="py-2.5 px-3 text-center"><T>Аракет</T></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {transactions.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-6 text-center text-stone-400">Азырынча катталган төлөм жок</td>
+                    <td colSpan={7} className="py-6 text-center text-stone-400"><T>Азырынча катталган төлөм жок</T></td>
                   </tr>
                 )}
                 {(isAdminLoggedIn ? transactions : transactions.slice(0, 10)).map((tx) => (
@@ -752,7 +753,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                         )}
                         className="px-2.5 py-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-md transition-colors cursor-pointer"
                       >
-                        Чекти көрүү
+                        <T>Чекти көрүү</T>
                       </button>
                     </td>
                   </tr>

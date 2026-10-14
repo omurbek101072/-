@@ -41,7 +41,7 @@ import { generateId, nowTimestamp } from '../utils/ids';
 import { ReceiptModal } from './ReceiptModal';
 import { SiteContentEditor } from './SiteContentEditor';
 import { AdminManager } from './AdminManager';
-import { ContentManager } from './ContentManager';
+import { ContentManager, MachineryEditor } from './ContentManager';
 
 interface AdminPanelProps {
   onClose: () => void;
@@ -251,20 +251,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   useEffect(() => {
     setLocalTariffs(tariffs);
   }, [tariffs]);
-  const [editingMachine, setEditingMachine] = useState<MachineryItem | null>(null);
 
   const handleSaveTariffs = (e: React.FormEvent) => {
     e.preventDefault();
     updateTariffs(localTariffs);
     showNotice('Муниципалдык тарифтер ийгиликтүү жаңыртылды жана сайт боюнча күчүнө кирди!');
-  };
-
-  const handleSaveMachine = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingMachine) return;
-    updateMachineryItem(editingMachine);
-    setEditingMachine(null);
-    showNotice(`«${editingMachine.name}» техникасынын параметрлери жаңыртылды!`);
   };
 
   const handleSaveSiteSettings = (e: React.FormEvent) => {
@@ -300,11 +291,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
               <span className="text-sm font-extrabold tracking-tight text-white">
                 «Тазалык» МИ — Башкаруу панели (Админ)
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800">
+              <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800">
                 Айыл өкмөтү
               </span>
             </div>
-            <p className="text-[11px] text-stone-400">
+            <p className="hidden sm:block text-[11px] text-stone-400">
               Заказдарды кабыл алуу, төлөмдөр, маалыматтарды өзгөртүү жана отчеттуулук
             </p>
           </div>
@@ -313,7 +304,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
         <div className="flex items-center gap-2">
           <button
             onClick={onClose}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-semibold transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5 text-stone-400" />
             <span>Сайтка чыгуу</span>
@@ -335,17 +326,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
       )}
 
       {/* Main Admin Layout: Sidebar + Workspace */}
-      <div className="flex-1 flex overflow-hidden bg-stone-100">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-stone-100">
         {/* Navigation Sidebar */}
-        <aside className="w-56 sm:w-64 bg-white border-r border-stone-200 p-3 flex flex-col justify-between shrink-0 overflow-y-auto">
-          <div className="space-y-1 text-xs font-semibold">
-            <div className="text-[11px] text-stone-400 uppercase tracking-wider px-3 py-2 font-mono">
+        <aside className="w-full md:w-56 lg:w-64 bg-white border-b md:border-b-0 md:border-r border-stone-200 p-2 md:p-3 flex flex-col justify-between shrink-0 md:overflow-y-auto">
+          <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible text-xs font-semibold pb-1 md:pb-0">
+            <div className="hidden md:block text-[11px] text-stone-400 uppercase tracking-wider px-3 py-2 font-mono">
               Башкаруу менюсу
             </div>
 
             <button
               onClick={() => setActiveTab('overview')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
                 activeTab === 'overview'
                   ? 'bg-emerald-50 text-emerald-900 font-bold'
                   : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
@@ -356,8 +347,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             </button>
 
             <button
+              onClick={() => setActiveTab('content')}
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+                activeTab === 'content'
+                  ? 'bg-emerald-50 text-emerald-900 font-bold'
+                  : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+              }`}
+            >
+              <FileText className="w-4 h-4 text-sky-700" />
+              <span>Жаңылыктар, отчеттор, сүрөттөр</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('orders')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
                 activeTab === 'orders'
                   ? 'bg-emerald-50 text-emerald-900 font-bold'
                   : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
@@ -376,7 +379,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
 
             <button
               onClick={() => setActiveTab('tickets')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
                 activeTab === 'tickets'
                   ? 'bg-emerald-50 text-emerald-900 font-bold'
                   : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
@@ -395,7 +398,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
 
             <button
               onClick={() => setActiveTab('cashier')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
                 activeTab === 'cashier'
                   ? 'bg-emerald-50 text-emerald-900 font-bold'
                   : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
@@ -407,7 +410,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
 
             <button
               onClick={() => setActiveTab('subscribers')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
                 activeTab === 'subscribers'
                   ? 'bg-emerald-50 text-emerald-900 font-bold'
                   : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
@@ -419,7 +422,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
 
             <button
               onClick={() => setActiveTab('site_content')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
                 activeTab === 'site_content'
                   ? 'bg-emerald-50 text-emerald-900 font-bold'
                   : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
@@ -429,21 +432,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
               <span>Аталыштар & Мазмун</span>
             </button>
 
-            <button
-              onClick={() => setActiveTab('content')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
-                activeTab === 'content'
-                  ? 'bg-emerald-50 text-emerald-900 font-bold'
-                  : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
-              }`}
-            >
-              <FileText className="w-4 h-4 text-sky-700" />
-              <span>Жаңылыктар, отчеттор, сүрөттөр</span>
-            </button>
 
             <button
               onClick={() => setActiveTab('admins')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
                 activeTab === 'admins'
                   ? 'bg-emerald-50 text-emerald-900 font-bold'
                   : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
@@ -455,7 +447,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
 
             <button
               onClick={() => setActiveTab('settings')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
                 activeTab === 'settings'
                   ? 'bg-emerald-50 text-emerald-900 font-bold'
                   : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
@@ -467,7 +459,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
 
             <button
               onClick={() => setActiveTab('reports')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
                 activeTab === 'reports'
                   ? 'bg-emerald-50 text-emerald-900 font-bold'
                   : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
@@ -478,7 +470,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             </button>
           </div>
 
-          <div className="pt-4 border-t border-stone-200 text-[11px] text-stone-400 space-y-2">
+          <div className="hidden md:block pt-4 border-t border-stone-200 text-[11px] text-stone-400 space-y-2">
             <button
               onClick={() => {
                 resetToDefaults();
@@ -1751,143 +1743,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
               <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-xs space-y-4">
                 <div className="border-b border-stone-100 pb-3">
                   <h3 className="text-sm font-bold text-stone-900">
-                    2. Атайын техникалардын бааларын жана статусун башкаруу
+                    2. Атайын техника: кошуу, сүрөтүн, баасын, статусун өзгөртүү, өчүрүү
                   </h3>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  {machineryCatalog.map(machine => (
-                    <div key={machine.id} className="p-4 rounded-xl border border-stone-200 bg-stone-50/60 flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-start justify-between">
-                          <h4 className="font-bold text-stone-900 text-xs">{machine.name}</h4>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            machine.status === 'бош' ? 'bg-emerald-100 text-emerald-800' :
-                            machine.status === 'иште' ? 'bg-amber-100 text-amber-800' :
-                            'bg-rose-100 text-rose-800'
-                          }`}>
-                            {machine.status}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-stone-500 font-mono mt-0.5">{machine.model}</p>
-                        <div className="mt-2 text-[11px] text-stone-600 space-y-0.5">
-                          <div>Сааттык тариф: <strong className="font-mono text-stone-900">{machine.hourlyRate} сом</strong></div>
-                          <div>Смена (8 саат): <strong className="font-mono text-stone-900">{machine.shiftRate} сом</strong></div>
-                          {machine.tripRate && (
-                            <div>Рейс тарифи: <strong className="font-mono text-stone-900">{machine.tripRate} сом</strong></div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="mt-3 pt-2 border-t border-stone-200 flex items-center justify-between">
-                        <button
-                          onClick={() => setEditingMachine(machine)}
-                          className="text-xs font-semibold text-emerald-700 hover:underline cursor-pointer"
-                        >
-                          Баасын же статусун өзгөртүү →
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <MachineryEditor />
               </div>
-
-              {/* Edit Machinery Modal */}
-              {editingMachine && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                  <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-stone-200 shadow-2xl space-y-4">
-                    <h3 className="text-base font-bold text-stone-900">
-                      Техниканы өзгөртүү: {editingMachine.name}
-                    </h3>
-
-                    <form onSubmit={handleSaveMachine} className="space-y-3 text-xs">
-                      <div>
-                        <label className="block text-stone-700 font-semibold mb-1">Техниканын аталышы:</label>
-                        <input
-                          type="text"
-                          value={editingMachine.name}
-                          onChange={(e) => setEditingMachine({ ...editingMachine, name: e.target.value })}
-                          className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-bold"
-                          placeholder="Мисалы: Экскаватор-жүктөгүч"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-stone-700 font-semibold mb-1">Маркасы жана модели:</label>
-                        <input
-                          type="text"
-                          value={editingMachine.model}
-                          onChange={(e) => setEditingMachine({ ...editingMachine, model: e.target.value })}
-                          className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs"
-                          placeholder="Мисалы: JCB 3CX Super"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-stone-700 font-semibold mb-1">Статусу:</label>
-                        <select
-                          value={editingMachine.status}
-                          onChange={(e) => setEditingMachine({ ...editingMachine, status: e.target.value as any })}
-                          className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs"
-                        >
-                          <option value="бош">Бош (Иштөөгө даяр)</option>
-                          <option value="иште">Иште (Заказ аткарууда)</option>
-                          <option value="ремонтто">Ремонтто (Техникалык тейлөөдө)</option>
-                        </select>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-stone-700 font-semibold mb-1">Сааттык баасы (сом):</label>
-                          <input
-                            type="number"
-                            value={editingMachine.hourlyRate}
-                            onChange={(e) => setEditingMachine({ ...editingMachine, hourlyRate: Number(e.target.value) })}
-                            className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-mono font-bold"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-stone-700 font-semibold mb-1">Сменалык баасы (сом):</label>
-                          <input
-                            type="number"
-                            value={editingMachine.shiftRate}
-                            onChange={(e) => setEditingMachine({ ...editingMachine, shiftRate: Number(e.target.value) })}
-                            className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-mono font-bold"
-                          />
-                        </div>
-                      </div>
-
-                      {editingMachine.tripRate !== undefined && (
-                        <div>
-                          <label className="block text-stone-700 font-semibold mb-1">1 рейс баасы (сом):</label>
-                          <input
-                            type="number"
-                            value={editingMachine.tripRate}
-                            onChange={(e) => setEditingMachine({ ...editingMachine, tripRate: Number(e.target.value) })}
-                            className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-mono font-bold"
-                          />
-                        </div>
-                      )}
-
-                      <div className="flex justify-end gap-2 pt-2">
-                        <button
-                          type="button"
-                          onClick={() => setEditingMachine(null)}
-                          className="px-3.5 py-2 text-xs font-semibold text-stone-600 bg-stone-100 hover:bg-stone-200 rounded-lg cursor-pointer"
-                        >
-                          Жокко чыгаруу
-                        </button>
-                        <button
-                          type="submit"
-                          className="px-4 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg cursor-pointer"
-                        >
-                          Сактоо
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

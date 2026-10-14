@@ -168,6 +168,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
   const [isEditModeActive, setIsEditModeActive] = useState(false);
+  // Админ киргенде сайттын бетиндеги «Өзгөртүү» баскычтары дароо көрүнсүн
+  useEffect(() => {
+    setIsEditModeActive(isAdminLoggedIn);
+  }, [isAdminLoggedIn]);
   const [isLoading, setIsLoading] = useState(true);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);

@@ -90,6 +90,8 @@ export interface SiteContent {
   wasteSchedule: WasteDay[];
   heroStats: HeroStat[];
   images: SiteImages;
+  /** Сайттагы майда тексттердин админ өзгөрткөн варианттары: баштапкы текст → жаңы текст */
+  texts: Record<string, string>;
 }
 
 export const CONTENT_KEYS: (keyof SiteContent)[] = [
@@ -100,7 +102,8 @@ export const CONTENT_KEYS: (keyof SiteContent)[] = [
   'pastureReport',
   'wasteSchedule',
   'heroStats',
-  'images'
+  'images',
+  'texts'
 ];
 
 export const newId = () => Math.random().toString(36).slice(2, 10);
@@ -190,7 +193,8 @@ export const DEFAULT_CONTENT: SiteContent = {
   images: {
     hero: 'images/tazalyk_hero_village_1791715414641.jpg',
     pasture: 'images/tazalyk_pasture_landscape_1791715452252.jpg'
-  }
+  },
+  texts: {}
 };
 
 // Базадан келген маалыматты баштапкы маанилер менен айкалыштыруу

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MachineryItem, MachineryOrder } from '../types';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
+import { T, MachineAdminTools, AddMachineButton } from './AdminInline';
 import { isValidKgPhone, PHONE_ERROR, todayIso } from '../utils/validation';
 import { Truck, Clock, Fuel, ShieldCheck, CheckCircle2, Calendar, Phone, ArrowRight, UserCheck, AlertCircle, X } from 'lucide-react';
 
@@ -127,7 +128,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 uppercase tracking-wider">
               <Truck className="w-4 h-4" />
-              <span>Муниципалдык автопарк</span>
+              <span><T>Муниципалдык автопарк</T></span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 mt-1" style={{ textWrap: 'balance' }}>
               <EditableText settingKey="machinerySectionTitle" label="Атайын техника башкы аталышы" />
@@ -137,6 +138,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
             </p>
           </div>
 
+          <AddMachineButton />
           {/* Category Filter segmented tabs */}
           <div className="flex flex-wrap items-center gap-1.5 p-1 bg-stone-100 rounded-xl text-xs font-medium shrink-0">
             {[
@@ -169,7 +171,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               <span>{bookingNotice}</span>
             </div>
             <button onClick={() => setBookingNotice(null)} className="text-stone-500 hover:text-stone-800">
-              Жабуу
+              <T>Жабуу</T>
             </button>
           </div>
         )}
@@ -184,12 +186,18 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               <div>
                 {/* Photo */}
                 <div className="relative h-48 bg-stone-100 overflow-hidden">
-                  <img
-                    src={machine.image}
-                    alt={machine.name}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                  />
+                  {machine.image ? (
+                    <img
+                      src={machine.image}
+                      alt={machine.name}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-stone-300">
+                      <Truck className="w-14 h-14" />
+                    </div>
+                  )}
                   <div className="absolute top-3 left-3 bg-stone-950/80 backdrop-blur-sm text-white px-2.5 py-1 rounded-md text-[11px] font-mono">
                     {machine.model}
                   </div>
@@ -212,19 +220,23 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                   {/* Specs & Tags */}
                   <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/70 space-y-1.5 text-xs">
                     <div className="flex justify-between text-stone-700">
-                      <span className="text-stone-500">Мүнөздөмөсү:</span>
+                      <span className="text-stone-500"><T>Мүнөздөмөсү:</T></span>
                       <span className="font-semibold text-right">{machine.specs.capacity}</span>
                     </div>
                     <div className="flex justify-between text-stone-700">
-                      <span className="text-stone-500">Айдоочу / Оператор:</span>
-                      <span className="text-emerald-700 font-semibold">Камтылган</span>
+                      <span className="text-stone-500"><T>Айдоочу / Оператор:</T></span>
+                      <span className={machine.specs.driverIncluded ? 'text-emerald-700 font-semibold' : 'text-stone-600'}>
+                        {machine.specs.driverIncluded ? 'Камтылган' : 'Камтылган эмес'}
+                      </span>
                     </div>
                     <div className="flex justify-between text-stone-700">
-                      <span className="text-stone-500">Күйүүчү май (ГСМ):</span>
-                      <span className="text-emerald-700 font-semibold">Камтылган</span>
+                      <span className="text-stone-500"><T>Күйүүчү май (ГСМ):</T></span>
+                      <span className={machine.specs.fuelIncluded ? 'text-emerald-700 font-semibold' : 'text-stone-600'}>
+                        {machine.specs.fuelIncluded ? 'Камтылган' : 'Камтылган эмес'}
+                      </span>
                     </div>
                     <div className="flex justify-between text-stone-700">
-                      <span className="text-stone-500">Минималдуу заказ:</span>
+                      <span className="text-stone-500"><T>Минималдуу заказ:</T></span>
                       <span className="font-mono text-stone-800">{machine.specs.minOrderHours} сааттан баштап</span>
                     </div>
                   </div>
@@ -232,14 +244,14 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                   {/* Rates */}
                   <div className="pt-2 flex items-baseline justify-between border-t border-stone-100">
                     <div>
-                      <span className="text-[11px] text-stone-400 block">Сааттык тариф:</span>
+                      <span className="text-[11px] text-stone-400 block"><T>Сааттык тариф:</T></span>
                       <span className="text-lg font-extrabold text-stone-900 font-mono tabular-nums">
                         {machine.hourlyRate.toLocaleString('ru-RU')} с.
                         <span className="text-xs font-normal text-stone-500">/саат</span>
                       </span>
                     </div>
                     <div className="text-right">
-                      <span className="text-[11px] text-stone-400 block">Смена (8 саат):</span>
+                      <span className="text-[11px] text-stone-400 block"><T>Смена (8 саат):</T></span>
                       <span className="text-sm font-bold text-emerald-800 font-mono tabular-nums">
                         {machine.shiftRate.toLocaleString('ru-RU')} с.
                       </span>
@@ -249,14 +261,15 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               </div>
 
               {/* Action Button */}
-              <div className="p-5 pt-0">
+              <div className="p-5 pt-0 space-y-2">
+                <MachineAdminTools machine={machine} />
                 <button
                   type="button"
                   onClick={() => handleOpenBooking(machine)}
                   className="w-full py-2.5 bg-stone-900 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                 >
                   <Calendar className="w-3.5 h-3.5" />
-                  <span>Ижарага алуу / Смета эсептөө</span>
+                  <span><T>Ижарага алуу / Смета эсептөө</T></span>
                 </button>
               </div>
             </div>
@@ -270,8 +283,8 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="font-bold text-stone-900">Расмий келишим жана дүмүрчөк</h4>
-              <p className="mt-0.5">Кызматтар айыл өкмөттүн расмий тарифи менен көрсөтүлүп, бардык каржылык документтер берилет.</p>
+              <h4 className="font-bold text-stone-900"><T>Расмий келишим жана дүмүрчөк</T></h4>
+              <p className="mt-0.5"><T>Кызматтар айыл өкмөттүн расмий тарифи менен көрсөтүлүп, бардык каржылык документтер берилет.</T></p>
             </div>
           </div>
 
@@ -280,8 +293,8 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               <Clock className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="font-bold text-stone-900">Өз убагында жеткирүү</h4>
-              <p className="mt-0.5">Заказ кабыл алынгандан кийин техника көрсөтүлгөн дарекке графикке ылайык өз убагында келет.</p>
+              <h4 className="font-bold text-stone-900"><T>Өз убагында жеткирүү</T></h4>
+              <p className="mt-0.5"><T>Заказ кабыл алынгандан кийин техника көрсөтүлгөн дарекке графикке ылайык өз убагында келет.</T></p>
             </div>
           </div>
 
@@ -290,8 +303,8 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               <Fuel className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="font-bold text-stone-900">Тажрыйбалуу операторлор</h4>
-              <p className="mt-0.5">Бардык техникаларды 5+ жылдык тажрыйбасы бар кесипкөй айдоочулар башкарат.</p>
+              <h4 className="font-bold text-stone-900"><T>Тажрыйбалуу операторлор</T></h4>
+              <p className="mt-0.5"><T>Бардык техникаларды 5+ жылдык тажрыйбасы бар кесипкөй айдоочулар башкарат.</T></p>
             </div>
           </div>
         </div>
@@ -305,7 +318,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
             <div className="bg-stone-900 text-white p-5 flex items-center justify-between">
               <div>
                 <span className="text-[11px] text-emerald-400 font-semibold uppercase tracking-wider block">
-                  Техниканы ижарага алуу өтүнмөсү
+                  <T>Техниканы ижарага алуу өтүнмөсү</T>
                 </span>
                 <h3 className="font-bold text-base text-white mt-0.5">{bookingItem.name}</h3>
                 <p className="text-xs text-stone-300 font-mono">{bookingItem.model}</p>
@@ -322,7 +335,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
             <form onSubmit={handleSubmitBooking} className="p-6 space-y-4 text-xs">
               {/* Order Mode selector */}
               <div>
-                <label className="block font-bold text-stone-800 mb-1.5">Ижара түрү:</label>
+                <label className="block font-bold text-stone-800 mb-1.5"><T>Ижара түрү:</T></label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
@@ -333,7 +346,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                         : 'border-stone-200 bg-stone-50 text-stone-600'
                     }`}
                   >
-                    <span>Сааттык</span>
+                    <span><T>Сааттык</T></span>
                     <span className="block text-[10px] text-stone-400">{bookingItem.hourlyRate} с/саат</span>
                   </button>
 
@@ -346,7 +359,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                         : 'border-stone-200 bg-stone-50 text-stone-600'
                     }`}
                   >
-                    <span>Смена (8 саат)</span>
+                    <span><T>Смена (8 саат)</T></span>
                     <span className="block text-[10px] text-stone-400">{bookingItem.shiftRate} с/күн</span>
                   </button>
 
@@ -360,12 +373,12 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                           : 'border-stone-200 bg-stone-50 text-stone-600'
                       }`}
                     >
-                      <span>Рейс боюнча</span>
+                      <span><T>Рейс боюнча</T></span>
                       <span className="block text-[10px] text-stone-400">{bookingItem.tripRate} с/рейс</span>
                     </button>
                   ) : (
                     <div className="py-2 px-3 rounded-lg border border-dashed border-stone-200 text-center text-stone-400">
-                      Рейс тарифи жок
+                      <T>Рейс тарифи жок</T>
                     </div>
                   )}
                 </div>
@@ -408,7 +421,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               {/* Inputs */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-stone-700 font-semibold mb-1">Күнү:</label>
+                  <label className="block text-stone-700 font-semibold mb-1"><T>Күнү:</T></label>
                   <input
                     type="date"
                     min={todayIso()}
@@ -418,7 +431,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                   />
                 </div>
                 <div>
-                  <label className="block text-stone-700 font-semibold mb-1">Телефон номери:</label>
+                  <label className="block text-stone-700 font-semibold mb-1"><T>Телефон номери:</T></label>
                   <input
                     type="tel"
                     inputMode="tel"
@@ -432,7 +445,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               </div>
 
               <div>
-                <label className="block text-stone-700 font-semibold mb-1">Иштин дареги (көчө, үй номери):</label>
+                <label className="block text-stone-700 font-semibold mb-1"><T>Иштин дареги (көчө, үй номери):</T></label>
                 <input
                   type="text"
                   required
@@ -444,7 +457,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               </div>
 
               <div>
-                <label className="block text-stone-700 font-semibold mb-1">Иштин түрү жана тапшырма:</label>
+                <label className="block text-stone-700 font-semibold mb-1"><T>Иштин түрү жана тапшырма:</T></label>
                 <input
                   type="text"
                   value={workDescription}
@@ -461,11 +474,11 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               {/* Estimate & Buttons */}
               <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200/90 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] uppercase text-emerald-800 font-semibold block">Болжолдуу смета</span>
+                  <span className="text-[10px] uppercase text-emerald-800 font-semibold block"><T>Болжолдуу смета</T></span>
                   <div className="text-xl font-extrabold text-emerald-950 font-mono tabular-nums">
                     {calculateEstimate(bookingItem).toLocaleString('ru-RU')} сом
                   </div>
-                  <span className="text-[10px] text-stone-500">Оператор жана май баага камтылган</span>
+                  <span className="text-[10px] text-stone-500"><T>Оператор жана май баага камтылган</T></span>
                 </div>
 
                 <div className="flex gap-2">
@@ -474,7 +487,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                     disabled={isSending}
                     className="disabled:opacity-60 px-3 py-2 bg-stone-800 hover:bg-stone-900 text-white font-semibold rounded-lg text-xs cursor-pointer shadow-xs"
                   >
-                    Өтүнмө калтыруу
+                    <T>Өтүнмө калтыруу</T>
                   </button>
                   <button
                     type="button"
@@ -482,7 +495,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                     disabled={isSending}
                     className="disabled:opacity-60 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs cursor-pointer shadow-xs"
                   >
-                    Азыр онлайн төлөө
+                    <T>Азыр онлайн төлөө</T>
                   </button>
                 </div>
               </div>

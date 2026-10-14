@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import { MachineryItem } from '../data/mockData';
 import {
@@ -612,7 +613,7 @@ const HomeEditor: React.FC = () => {
 // ---------------------------------------------------------------------------
 // 7. Техника
 // ---------------------------------------------------------------------------
-const EMPTY_MACHINE = (): MachineryItem => ({
+export const EMPTY_MACHINE = (): MachineryItem => ({
   id: `m-${newId()}`,
   name: '',
   category: 'special',
@@ -627,7 +628,7 @@ const EMPTY_MACHINE = (): MachineryItem => ({
   commonUses: []
 });
 
-const MachineForm: React.FC<{ initial: MachineryItem; isNew: boolean; onClose: () => void }> = ({ initial, isNew, onClose }) => {
+export const MachineForm: React.FC<{ initial: MachineryItem; isNew: boolean; onClose: () => void }> = ({ initial, isNew, onClose }) => {
   const { updateMachineryItem, addMachineryItem } = useApp();
   const [m, setM] = useState<MachineryItem>(initial);
   const [error, setError] = useState<string | null>(null);
@@ -644,8 +645,13 @@ const MachineForm: React.FC<{ initial: MachineryItem; isNew: boolean; onClose: (
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm text-left"
+      onClick={e => e.stopPropagation()}
+      onSubmit={e => e.stopPropagation()}
+      onKeyDown={e => e.stopPropagation()}
+    >
       <form onSubmit={submit} className="bg-white rounded-2xl p-5 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-stone-200 shadow-2xl space-y-3 text-xs">
         <div className="flex items-center justify-between border-b border-stone-100 pb-2">
           <h3 className="text-sm font-bold text-stone-900">{isNew ? 'Жаңы техника кошуу' : `Өзгөртүү: ${initial.name}`}</h3>
@@ -717,11 +723,12 @@ const MachineForm: React.FC<{ initial: MachineryItem; isNew: boolean; onClose: (
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body
   );
 };
 
-const MachineryEditor: React.FC = () => {
+export const MachineryEditor: React.FC = () => {
   const { machineryCatalog, deleteMachineryItem } = useApp();
   const [editing, setEditing] = useState<{ item: MachineryItem; isNew: boolean } | null>(null);
 
@@ -765,9 +772,9 @@ const MachineryEditor: React.FC = () => {
 // ---------------------------------------------------------------------------
 // Негизги компонент
 // ---------------------------------------------------------------------------
-type Tab = 'news' | 'documents' | 'budget' | 'pasture' | 'waste' | 'machinery' | 'home';
+export type ContentTab = 'news' | 'documents' | 'budget' | 'pasture' | 'waste' | 'machinery' | 'home';
 
-const TABS: { id: Tab; label: string; icon: React.FC<{ className?: string }> }[] = [
+const TABS: { id: ContentTab; label: string; icon: React.FC<{ className?: string }> }[] = [
   { id: 'news', label: 'Жаңылыктар', icon: Calendar },
   { id: 'documents', label: 'Документтер', icon: FileText },
   { id: 'budget', label: 'Бюджет', icon: BarChart3 },
@@ -778,7 +785,7 @@ const TABS: { id: Tab; label: string; icon: React.FC<{ className?: string }> }[]
 ];
 
 export const ContentManager: React.FC = () => {
-  const [tab, setTab] = useState<Tab>('news');
+  const [tab, setTab] = useState<ContentTab>('news');
 
   return (
     <div className="space-y-5 max-w-5xl">
@@ -817,5 +824,59 @@ export const ContentManager: React.FC = () => {
       {tab === 'machinery' && <MachineryEditor />}
       {tab === 'home' && <HomeEditor />}
     </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Сайттын бетинен түз ачылуучу терезе (админ «Өзгөртүү» баскычын басканда)
+// ---------------------------------------------------------------------------
+const EDITORS: Record<ContentTab, React.FC> = {
+  news: NewsEditor,
+  documents: DocumentsEditor,
+  budget: BudgetEditor,
+  pasture: PastureReportEditor,
+  waste: WasteEditor,
+  machinery: MachineryEditor,
+  home: HomeEditor
+};
+
+export const ContentEditorModal: React.FC<{ tab: ContentTab; title?: string; onClose: () => void }> = ({ tab, title, onClose }) => {
+  const Editor = EDITORS[tab];
+  const label = title || TABS.find(t => t.id === tab)?.label || '';
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[65] flex items-start sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm text-left font-sans"
+      onClick={e => e.stopPropagation()}
+      onSubmit={e => e.stopPropagation()}
+      onKeyDown={e => e.stopPropagation()}
+      role="dialog"
+      aria-modal="true"
+      aria-label={label}
+    >
+      <div className="bg-stone-100 rounded-2xl w-full max-w-4xl max-h-[95vh] flex flex-col shadow-2xl border border-stone-200 text-stone-900">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 bg-white border-b border-stone-200 rounded-t-2xl">
+          <h3 className="text-sm font-bold">Өзгөртүү: {label}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-xs font-semibold cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Жабуу</span>
+          </button>
+        </div>
+        <div className="p-3 sm:p-4 overflow-y-auto">
+          <Editor />
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 };
