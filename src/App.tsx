@@ -15,6 +15,8 @@ import { ReportsSection } from './components/ReportsSection';
 import { Footer } from './components/Footer';
 import { CitizenRequestModal } from './components/CitizenRequestModal';
 import { AdminPanel } from './components/AdminPanel';
+import { AboutSection } from './components/AboutSection';
+import { FloatingContact } from './components/FloatingContact';
 import { AdminLoginModal, PasswordRecoveryModal } from './components/AdminLoginModal';
 import { AdminTopBar } from './components/AdminTopBar';
 
@@ -198,7 +200,11 @@ function MainAppContent() {
         {activeTab === 'reports' && (
           <ReportsSection />
         )}
+
+        {activeTab === 'about' && <AboutSection />}
       </main>
+
+      <FloatingContact />
 
       {/* Footer */}
       <Footer

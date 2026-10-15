@@ -71,6 +71,16 @@ export interface MeterResult {
   amount: number;
 }
 
+export interface Review {
+  id: string;
+  name: string;
+  village: string;
+  rating: number;
+  text: string;
+  approved: boolean;
+  created_at: string;
+}
+
 export interface AdminInfo {
   email: string;
   addedAt: string;
@@ -127,6 +137,11 @@ interface AppContextType {
   addMachineryItem: (item: MachineryItem) => void;
   deleteMachineryItem: (id: string) => void;
   content: SiteContent;
+  reviews: Review[];
+  submitReview: (r: { name: string; village: string; rating: number; text: string }) => Promise<Result>;
+  listAllReviews: () => Promise<Review[]>;
+  setReviewApproved: (id: string, approved: boolean) => Promise<Result>;
+  deleteReview: (id: string) => Promise<Result>;
   updateContent: <K extends keyof SiteContent>(key: K, data: SiteContent[K]) => Promise<Result>;
   updateTariffs: (newTariffs: TariffConfig) => void;
   updateSiteSettings: (updates: Partial<SiteSettings>) => void;
@@ -159,6 +174,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pastureZones, setPastureZones] = useState<PastureZone[]>(PASTURE_ZONES);
   const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
   const [content, setContent] = useState<SiteContent>(DEFAULT_CONTENT);
+  const [reviews, setReviews] = useState<Review[]>([]);
 
   // Админге гана жүктөлүүчү жеке маалымат
   const [subscribers, setSubscribers] = useState<SubscriberAccount[]>([]);
@@ -204,6 +220,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setContent(mergeContent(await db.select<{ key: string; data: unknown }>('content_blocks', 'select=key,data')));
     } catch (e) {
       console.warn('content_blocks:', e);
+    }
+    // Жарыяланган пикирлер (005_reviews.sql иштетиле элек болсо — бош)
+    try {
+      setReviews(
+        (await db.select<Review>('reviews', 'select=id,name,village,rating,text,approved,created_at&order=created_at.desc&limit=200')).filter(
+          r => r.approved
+        )
+      );
+    } catch (e) {
+      console.warn('reviews:', e);
     }
   }, []);
 
@@ -538,6 +564,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const REVIEWS_MISSING = "Пикирлер таблицасы жок: supabase/005_reviews.sql файлын Supabase'те иштетиңиз.";
+  const reviewErr = (e: unknown) => {
+    const m = errText(e);
+    return /reviews|submit_review|schema cache|does not exist|Could not find/i.test(m) ? REVIEWS_MISSING : m;
+  };
+  const submitReview = async (r: { name: string; village: string; rating: number; text: string }): Promise<Result> => {
+    try {
+      await db.rpc('submit_review', { p_name: r.name, p_village: r.village, p_rating: r.rating, p_text: r.text });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: reviewErr(e) };
+    }
+  };
+  const listAllReviews = async (): Promise<Review[]> => {
+    try {
+      return await db.select<Review>('reviews', 'select=id,name,village,rating,text,approved,created_at&order=created_at.desc&limit=500');
+    } catch (e) {
+      throw new Error(reviewErr(e));
+    }
+  };
+  const refreshPublicReviews = (all: Review[]) => setReviews(all.filter(r => r.approved));
+  const setReviewApproved = async (id: string, approved: boolean): Promise<Result> => {
+    try {
+      await db.update('reviews', `id=eq.${enc(id)}`, { approved });
+      refreshPublicReviews(await listAllReviews());
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: reviewErr(e) };
+    }
+  };
+  const deleteReview = async (id: string): Promise<Result> => {
+    try {
+      await db.remove('reviews', `id=eq.${enc(id)}`);
+      refreshPublicReviews(await listAllReviews());
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: reviewErr(e) };
+    }
+  };
+
   const listAdmins = async (): Promise<AdminInfo[]> => (await db.rpc<AdminInfo[]>('admin_list')) || [];
 
   const addAdmin = async (email: string): Promise<Result> => {
@@ -608,6 +674,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addMachineryItem,
         deleteMachineryItem,
         content,
+        reviews,
+        submitReview,
+        listAllReviews,
+        setReviewApproved,
+        deleteReview,
         updateContent,
         updateTariffs,
         updateSiteSettings,

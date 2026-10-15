@@ -29,7 +29,8 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'pasture', label: 'Жайыт пайдалануу' },
     { id: 'machinery', label: 'Атайын техника' },
     { id: 'payments', label: 'Онлайн төлөм' },
-    { id: 'reports', label: 'Отчеттор' }
+    { id: 'reports', label: 'Отчеттор' },
+    { id: 'about', label: 'Биз жөнүндө' }
   ];
 
   const handleNavClick = (id: string) => {

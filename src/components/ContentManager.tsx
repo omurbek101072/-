@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useApp } from '../context/AppContext';
+import { useApp, Review } from '../context/AppContext';
 import { MachineryItem } from '../data/mockData';
 import {
   SiteContent,
@@ -12,6 +12,13 @@ import {
   HeroStat,
   ReceptionBlock,
   SiteImages,
+  AboutBlock,
+  TeamMember,
+  Credential,
+  WorkItem,
+  AreasBlock,
+  FaqItem,
+  ContactsBlock,
   newId
 } from '../data/content';
 import { uploadImage, uploadPdf } from '../utils/media';
@@ -30,7 +37,16 @@ import {
   CheckCircle2,
   AlertCircle,
   RefreshCw,
-  X
+  X,
+  Users,
+  Award,
+  Image as ImageIcon,
+  MapPin,
+  CircleHelp,
+  Star,
+  Info,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -769,10 +785,364 @@ export const MachineryEditor: React.FC = () => {
   );
 };
 
+
+// ---------------------------------------------------------------------------
+// 8. Компания жөнүндө + байланыш (WhatsApp, чалуу)
+// ---------------------------------------------------------------------------
+const AboutEditor: React.FC = () => {
+  const ab = useDraft('about');
+  const ct = useDraft('contacts');
+  const setA = (patch: Partial<AboutBlock>) => ab.setDraft({ ...ab.draft, ...patch });
+  const setC = (patch: Partial<ContactsBlock>) => ct.setDraft({ ...ct.draft, ...patch });
+  const facts = ab.draft.facts || [];
+  return (
+    <div className="space-y-4">
+      <Card>
+        <h4 className="text-xs font-bold text-stone-900">Компания жөнүндө</h4>
+        <Field id="about-title" label="Аталышы" value={ab.draft.title} onChange={v => setA({ title: v })} />
+        <Field id="about-text" label="Тексти (абзацтарды бош сап менен бөлүңүз)" multiline rows={7} value={ab.draft.text} onChange={v => setA({ text: v })} />
+        <ImagePicker id="about-img" label="Сүрөт (мис. ишкананын имараты)" folder="about" value={ab.draft.image || undefined} onChange={url => setA({ image: url || '' })} />
+        <div className="space-y-2">
+          <span className="block text-[11px] font-semibold text-stone-700">Сандар (мис. «2008» — «негизделген жылы»)</span>
+          {facts.map((f, i) => (
+            <div key={f.id} className="grid grid-cols-[7rem_1fr_auto] gap-2 items-end">
+              <Field id={`af-v-${f.id}`} label="Сан" value={f.value} onChange={v => setA({ facts: facts.map((x, k) => (k === i ? { ...x, value: v } : x)) })} />
+              <Field id={`af-l-${f.id}`} label="Түшүндүрмө" value={f.label} onChange={v => setA({ facts: facts.map((x, k) => (k === i ? { ...x, label: v } : x)) })} />
+              <RowTools onRemove={() => setA({ facts: facts.filter((_, k) => k !== i) })} />
+            </div>
+          ))}
+          <button type="button" onClick={() => setA({ facts: [...facts, { id: newId(), value: '', label: '' }] })} className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:underline cursor-pointer">
+            <Plus className="w-3.5 h-3.5" /> Сан кошуу
+          </button>
+        </div>
+        <SaveBar dirty={ab.dirty} saving={ab.saving} status={ab.status} onSave={() => ab.save()} onReset={ab.reset} />
+      </Card>
+      <Card>
+        <h4 className="text-xs font-bold text-stone-900">WhatsApp жана чалуу баскычтары</h4>
+        <p className="text-[11px] text-stone-500">Сайттын оң жак ылдыйкы бурчунда турат. Тургун бир басуу менен чалат же WhatsApp'ка жазат.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field id="ct-wa" label="WhatsApp номери" placeholder="996700123456" value={ct.draft.whatsapp} onChange={v => setC({ whatsapp: v })} hint="Өлкө коду менен, + жана боштуксуз. Бош болсо WhatsApp баскычы көрүнбөйт." />
+          <Field id="ct-call" label="Чалуу үчүн номер" placeholder="0 (312) 55-01-20" value={ct.draft.callPhone} onChange={v => setC({ callPhone: v })} hint="Бош болсо диспетчердин номери колдонулат." />
+        </div>
+        <Field id="ct-wamsg" label="WhatsApp'тагы даяр билдирүү" value={ct.draft.whatsappMessage} onChange={v => setC({ whatsappMessage: v })} />
+        <label className="flex items-center gap-2 text-xs cursor-pointer">
+          <input type="checkbox" checked={ct.draft.showFloating} onChange={e => setC({ showFloating: e.target.checked })} />
+          <span>Баскычтарды сайтта көрсөтүү</span>
+        </label>
+        <SaveBar dirty={ct.dirty} saving={ct.saving} status={ct.status} onSave={() => ct.save()} onReset={ct.reset} />
+      </Card>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// 9. Команда
+// ---------------------------------------------------------------------------
+const TeamEditor: React.FC = () => {
+  const { draft, setDraft, save, reset, dirty, saving, status } = useDraft('team');
+  const set = (i: number, patch: Partial<TeamMember>) => setDraft(draft.map((m, k) => (k === i ? { ...m, ...patch } : m)));
+  return (
+    <div className="space-y-3">
+      <button type="button" onClick={() => setDraft([...draft, { id: newId(), name: '', role: '' }])} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold cursor-pointer">
+        <Plus className="w-3.5 h-3.5" />
+        <span>Кызматкер кошуу</span>
+      </button>
+      {draft.length === 0 && <p className="text-xs text-stone-400">Азырынча эч ким жок. Кызматкерди сүрөтү менен кошуңуз.</p>}
+      {draft.map((m, i) => (
+        <Card key={m.id}>
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">Кызматкер {i + 1}</span>
+            <RowTools onUp={i > 0 ? () => setDraft(move(draft, i, -1)) : undefined} onDown={i < draft.length - 1 ? () => setDraft(move(draft, i, 1)) : undefined} onRemove={() => setDraft(draft.filter((_, k) => k !== i))} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field id={`tm-n-${m.id}`} label="Аты-жөнү" value={m.name} onChange={v => set(i, { name: v })} />
+            <Field id={`tm-r-${m.id}`} label="Кызматы" value={m.role} onChange={v => set(i, { role: v })} placeholder="Мис. Директор" />
+          </div>
+          <ImagePicker id={`tm-p-${m.id}`} label="Сүрөтү" folder="team" value={m.photo} onChange={url => set(i, { photo: url })} />
+        </Card>
+      ))}
+      <SaveBar dirty={dirty} saving={saving} status={status} onSave={() => save()} onReset={reset} />
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// 10. Лицензиялар жана сертификаттар
+// ---------------------------------------------------------------------------
+const CredentialsEditor: React.FC = () => {
+  const { draft, setDraft, save, reset, dirty, saving, status } = useDraft('credentials');
+  const set = (i: number, patch: Partial<Credential>) => setDraft(draft.map((c, k) => (k === i ? { ...c, ...patch } : c)));
+  const add = (kind: Credential['kind']) => setDraft([...draft, { id: newId(), kind, title: '', number: '', issuedBy: '', date: '' }]);
+  return (
+    <div className="space-y-3">
+      <p className="text-[11px] text-stone-500">Ар бирине документтин сүрөтүн (скан) же PDF файлын тиркеңиз.</p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => add('license')} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold cursor-pointer">
+          <Plus className="w-3.5 h-3.5" />
+          <span>Лицензия кошуу</span>
+        </button>
+        <button type="button" onClick={() => add('certificate')} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-stone-800 hover:bg-stone-900 text-white text-xs font-bold cursor-pointer">
+          <Plus className="w-3.5 h-3.5" />
+          <span>Сертификат кошуу</span>
+        </button>
+      </div>
+      {draft.length === 0 && <p className="text-xs text-stone-400">Азырынча документ жок.</p>}
+      {draft.map((c, i) => (
+        <Card key={c.id}>
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">{c.kind === 'license' ? 'Лицензия' : 'Сертификат'} {i + 1}</span>
+            <RowTools onUp={i > 0 ? () => setDraft(move(draft, i, -1)) : undefined} onDown={i < draft.length - 1 ? () => setDraft(move(draft, i, 1)) : undefined} onRemove={() => setDraft(draft.filter((_, k) => k !== i))} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field id={`cr-t-${c.id}`} label="Аталышы" value={c.title} onChange={v => set(i, { title: v })} placeholder="Мис. Ичүүчү суу менен камсыздоо лицензиясы" />
+            <div>
+              <label htmlFor={`cr-k-${c.id}`} className="block text-[11px] font-semibold text-stone-700 mb-1">Түрү</label>
+              <select id={`cr-k-${c.id}`} value={c.kind} onChange={e => set(i, { kind: e.target.value as Credential['kind'] })} className={inputCls}>
+                <option value="license">Лицензия</option>
+                <option value="certificate">Сертификат</option>
+              </select>
+            </div>
+            <Field id={`cr-n-${c.id}`} label="Номери" value={c.number} onChange={v => set(i, { number: v })} />
+            <Field id={`cr-d-${c.id}`} label="Берилген күнү / мөөнөтү" value={c.date} onChange={v => set(i, { date: v })} />
+          </div>
+          <Field id={`cr-i-${c.id}`} label="Ким берген" value={c.issuedBy} onChange={v => set(i, { issuedBy: v })} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <ImagePicker id={`cr-img-${c.id}`} label="Документтин сүрөтү" folder="credentials" value={c.image} onChange={url => set(i, { image: url })} />
+            <PdfPicker id={`cr-f-${c.id}`} label="PDF (милдеттүү эмес)" value={c.file || ''} onChange={url => set(i, { file: url })} />
+          </div>
+        </Card>
+      ))}
+      <SaveBar dirty={dirty} saving={saving} status={status} onSave={() => save()} onReset={reset} />
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// 11. Аткарылган иштер (сүрөттөр)
+// ---------------------------------------------------------------------------
+const WorksEditor: React.FC = () => {
+  const { draft, setDraft, save, reset, dirty, saving, status } = useDraft('works');
+  const set = (i: number, patch: Partial<WorkItem>) => setDraft(draft.map((w, k) => (k === i ? { ...w, ...patch } : w)));
+  const today = new Date().toLocaleDateString('ru-RU');
+  return (
+    <div className="space-y-3">
+      <button type="button" onClick={() => setDraft([{ id: newId(), title: '', desc: '', date: today }, ...draft])} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold cursor-pointer">
+        <Plus className="w-3.5 h-3.5" />
+        <span>Аткарылган иш кошуу</span>
+      </button>
+      {draft.length === 0 && <p className="text-xs text-stone-400">Азырынча жок. Иштин сүрөтүн жана кыскача сүрөттөмөсүн кошуңуз.</p>}
+      {draft.map((w, i) => (
+        <Card key={w.id}>
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">Иш {i + 1}</span>
+            <RowTools onUp={i > 0 ? () => setDraft(move(draft, i, -1)) : undefined} onDown={i < draft.length - 1 ? () => setDraft(move(draft, i, 1)) : undefined} onRemove={() => setDraft(draft.filter((_, k) => k !== i))} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_10rem] gap-3">
+            <Field id={`wk-t-${w.id}`} label="Аталышы" value={w.title} onChange={v => set(i, { title: v })} placeholder="Мис. Ленин көчөсүндөгү суу түтүгү алмаштырылды" />
+            <Field id={`wk-d-${w.id}`} label="Күнү" value={w.date} onChange={v => set(i, { date: v })} />
+          </div>
+          <Field id={`wk-s-${w.id}`} label="Кыскача" multiline rows={2} value={w.desc} onChange={v => set(i, { desc: v })} />
+          <ImagePicker id={`wk-img-${w.id}`} label="Сүрөтү" folder="works" value={w.image} onChange={url => set(i, { image: url })} />
+        </Card>
+      ))}
+      <SaveBar dirty={dirty} saving={saving} status={status} onSave={() => save()} onReset={reset} />
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// 12. Тейлөө аймактары жана карта
+// ---------------------------------------------------------------------------
+const AreasEditor: React.FC = () => {
+  const { draft, setDraft, save, reset, dirty, saving, status } = useDraft('areas');
+  const setA = (patch: Partial<AreasBlock>) => setDraft({ ...draft, ...patch });
+  const zones = draft.zones || [];
+  return (
+    <div className="space-y-3">
+      <Card>
+        <Field id="ar-intro" label="Киришүү тексти" multiline rows={2} value={draft.intro} onChange={v => setA({ intro: v })} />
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_8rem] gap-3">
+          <Field
+            id="ar-map"
+            label="Картада көрсөтүлө турган жер"
+            placeholder="Мис. Ноокат, Ош облусу  же  40.2600, 72.6200"
+            value={draft.mapQuery}
+            onChange={v => setA({ mapQuery: v })}
+            hint="Айылдын аталышын облусу менен жазыңыз, же Google Maps'тен координатаны көчүрүп коюңуз. Бош болсо карта көрүнбөйт."
+          />
+          <Field id="ar-zoom" label="Масштаб (8–17)" type="number" value={draft.mapZoom} onChange={v => setA({ mapZoom: Math.min(17, Math.max(8, Number(v) || 12)) })} />
+        </div>
+        {draft.mapQuery.trim() && <ServiceMap query={draft.mapQuery} zoom={draft.mapZoom} className="h-56" />}
+      </Card>
+      <button type="button" onClick={() => setA({ zones: [...zones, { id: newId(), name: '', desc: '' }] })} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold cursor-pointer">
+        <Plus className="w-3.5 h-3.5" />
+        <span>Аймак кошуу</span>
+      </button>
+      {zones.map((z, i) => (
+        <Card key={z.id}>
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">Аймак {i + 1}</span>
+            <RowTools onUp={i > 0 ? () => setA({ zones: move(zones, i, -1) }) : undefined} onDown={i < zones.length - 1 ? () => setA({ zones: move(zones, i, 1) }) : undefined} onRemove={() => setA({ zones: zones.filter((_, k) => k !== i) })} />
+          </div>
+          <Field id={`zn-n-${z.id}`} label="Айыл / участок" value={z.name} onChange={v => setA({ zones: zones.map((x, k) => (k === i ? { ...x, name: v } : x)) })} />
+          <Field id={`zn-d-${z.id}`} label="Кызматтар / көчөлөр" multiline rows={2} value={z.desc} onChange={v => setA({ zones: zones.map((x, k) => (k === i ? { ...x, desc: v } : x)) })} placeholder="Мис. Таза суу, таштанды чыгаруу. Ленин, Манас көчөлөрү" />
+        </Card>
+      ))}
+      <SaveBar dirty={dirty} saving={saving} status={status} onSave={() => save()} onReset={reset} />
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// 13. Көп берилүүчү суроолор
+// ---------------------------------------------------------------------------
+const FaqEditor: React.FC = () => {
+  const { draft, setDraft, save, reset, dirty, saving, status } = useDraft('faq');
+  const set = (i: number, patch: Partial<FaqItem>) => setDraft(draft.map((f, k) => (k === i ? { ...f, ...patch } : f)));
+  return (
+    <div className="space-y-3">
+      <button type="button" onClick={() => setDraft([...draft, { id: newId(), q: '', a: '' }])} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold cursor-pointer">
+        <Plus className="w-3.5 h-3.5" />
+        <span>Суроо кошуу</span>
+      </button>
+      {draft.map((f, i) => (
+        <Card key={f.id}>
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">Суроо {i + 1}</span>
+            <RowTools onUp={i > 0 ? () => setDraft(move(draft, i, -1)) : undefined} onDown={i < draft.length - 1 ? () => setDraft(move(draft, i, 1)) : undefined} onRemove={() => setDraft(draft.filter((_, k) => k !== i))} />
+          </div>
+          <Field id={`fq-q-${f.id}`} label="Суроо" value={f.q} onChange={v => set(i, { q: v })} />
+          <Field id={`fq-a-${f.id}`} label="Жооп" multiline rows={3} value={f.a} onChange={v => set(i, { a: v })} />
+        </Card>
+      ))}
+      <SaveBar dirty={dirty} saving={saving} status={status} onSave={() => save()} onReset={reset} />
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// 14. Кардарлардын пикирлери (текшерүү жана жарыялоо)
+// ---------------------------------------------------------------------------
+export const Stars: React.FC<{ value: number; className?: string }> = ({ value, className = '' }) => (
+  <span className={`inline-flex text-amber-500 tracking-tight ${className}`} aria-label={`${value} / 5`}>
+    {'★★★★★'.slice(0, value)}
+    <span className="text-stone-300">{'★★★★★'.slice(value)}</span>
+  </span>
+);
+
+const ReviewsEditor: React.FC = () => {
+  const { listAllReviews, setReviewApproved, deleteReview } = useApp();
+  const [list, setList] = useState<Review[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'new' | 'all'>('new');
+
+  const load = async () => {
+    setError(null);
+    try {
+      setList(await listAllReviews());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Жүктөлгөн жок');
+      setList([]);
+    }
+  };
+  useEffect(() => {
+    load();
+  }, []);
+
+  const act = async (p: Promise<{ ok: boolean; error?: string }>) => {
+    const r = await p;
+    if (!r.ok) setError(r.error || 'Ката');
+    await load();
+  };
+
+  const shown = (list || []).filter(r => (filter === 'new' ? !r.approved : true));
+  const newCount = (list || []).filter(r => !r.approved).length;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[11px] text-stone-500">
+        Тургундар сайттан пикир калтырат. Сиз «Жарыялоо» баскандан кийин гана сайтта көрүнөт.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => setFilter('new')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${filter === 'new' ? 'bg-emerald-700 text-white' : 'bg-white border border-stone-200 text-stone-700'}`}>
+          Жаңылар ({newCount})
+        </button>
+        <button type="button" onClick={() => setFilter('all')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${filter === 'all' ? 'bg-emerald-700 text-white' : 'bg-white border border-stone-200 text-stone-700'}`}>
+          Баары ({(list || []).length})
+        </button>
+        <button type="button" onClick={load} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-stone-200 text-stone-700 cursor-pointer">
+          <RefreshCw className="w-3.5 h-3.5" /> Жаңыртуу
+        </button>
+      </div>
+      {error && <p className="text-[11px] text-rose-600 font-semibold" role="alert">{error}</p>}
+      {list === null && <p className="text-xs text-stone-400">Жүктөлүүдө…</p>}
+      {list !== null && shown.length === 0 && !error && (
+        <p className="text-xs text-stone-400">{filter === 'new' ? 'Жаңы пикир жок.' : 'Азырынча пикир жок.'}</p>
+      )}
+      {shown.map(r => (
+        <Card key={r.id} className={r.approved ? '' : 'border-amber-300 bg-amber-50/40'}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-xs">
+              <span className="font-bold text-stone-900">{r.name}</span>
+              {r.village && <span className="text-stone-500"> · {r.village}</span>}
+              <span className="text-stone-400"> · {new Date(r.created_at).toLocaleDateString('ru-RU')}</span>
+            </div>
+            <Stars value={r.rating} className="text-sm" />
+          </div>
+          <p className="text-xs text-stone-700 whitespace-pre-line">{r.text}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {r.approved ? (
+              <button type="button" onClick={() => act(setReviewApproved(r.id, false))} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-[11px] font-semibold cursor-pointer">
+                <EyeOff className="w-3.5 h-3.5" /> Сайттан алуу
+              </button>
+            ) : (
+              <button type="button" onClick={() => act(setReviewApproved(r.id, true))} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold cursor-pointer">
+                <Eye className="w-3.5 h-3.5" /> Жарыялоо
+              </button>
+            )}
+            <RowTools onRemove={() => act(deleteReview(r.id))} />
+            <span className={`ml-auto text-[10px] font-bold uppercase ${r.approved ? 'text-emerald-700' : 'text-amber-700'}`}>
+              {r.approved ? 'Сайтта' : 'Текшерилбеген'}
+            </span>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+// Карта (Google Maps — ачкычсыз embed)
+export const mapEmbedUrl = (query: string, zoom = 12) =>
+  `https://maps.google.com/maps?q=${encodeURIComponent(query.trim())}&z=${zoom}&output=embed`;
+
+export const ServiceMap: React.FC<{ query: string; zoom?: number; className?: string }> = ({ query, zoom = 12, className = '' }) => (
+  <iframe
+    title="Тейлөө аймагынын картасы"
+    src={mapEmbedUrl(query, zoom)}
+    className={`w-full rounded-xl border border-stone-200 bg-stone-100 ${className}`}
+    loading="lazy"
+    referrerPolicy="no-referrer-when-downgrade"
+  />
+);
+
 // ---------------------------------------------------------------------------
 // Негизги компонент
 // ---------------------------------------------------------------------------
-export type ContentTab = 'news' | 'documents' | 'budget' | 'pasture' | 'waste' | 'machinery' | 'home';
+export type ContentTab =
+  | 'news'
+  | 'documents'
+  | 'budget'
+  | 'pasture'
+  | 'waste'
+  | 'machinery'
+  | 'home'
+  | 'about'
+  | 'team'
+  | 'credentials'
+  | 'works'
+  | 'areas'
+  | 'faq'
+  | 'reviews';
 
 const TABS: { id: ContentTab; label: string; icon: React.FC<{ className?: string }> }[] = [
   { id: 'news', label: 'Жаңылыктар', icon: Calendar },
@@ -781,7 +1151,14 @@ const TABS: { id: ContentTab; label: string; icon: React.FC<{ className?: string
   { id: 'pasture', label: 'Жайыт отчету', icon: Mountain },
   { id: 'waste', label: 'Таштанды графиги', icon: Trash2 },
   { id: 'machinery', label: 'Техника', icon: Truck },
-  { id: 'home', label: 'Башкы бет / Сүрөттөр', icon: Sparkles }
+  { id: 'home', label: 'Башкы бет / Сүрөттөр', icon: Sparkles },
+  { id: 'about', label: 'Компания жана байланыш', icon: Info },
+  { id: 'team', label: 'Команда', icon: Users },
+  { id: 'credentials', label: 'Лицензия / Сертификат', icon: Award },
+  { id: 'works', label: 'Аткарылган иштер', icon: ImageIcon },
+  { id: 'reviews', label: 'Пикирлер', icon: Star },
+  { id: 'areas', label: 'Аймактар / Карта', icon: MapPin },
+  { id: 'faq', label: 'Суроо-жооп', icon: CircleHelp }
 ];
 
 export const ContentManager: React.FC = () => {
@@ -823,6 +1200,13 @@ export const ContentManager: React.FC = () => {
       {tab === 'waste' && <WasteEditor />}
       {tab === 'machinery' && <MachineryEditor />}
       {tab === 'home' && <HomeEditor />}
+      {tab === 'about' && <AboutEditor />}
+      {tab === 'team' && <TeamEditor />}
+      {tab === 'credentials' && <CredentialsEditor />}
+      {tab === 'works' && <WorksEditor />}
+      {tab === 'reviews' && <ReviewsEditor />}
+      {tab === 'areas' && <AreasEditor />}
+      {tab === 'faq' && <FaqEditor />}
     </div>
   );
 };
@@ -837,7 +1221,14 @@ const EDITORS: Record<ContentTab, React.FC> = {
   pasture: PastureReportEditor,
   waste: WasteEditor,
   machinery: MachineryEditor,
-  home: HomeEditor
+  home: HomeEditor,
+  about: AboutEditor,
+  team: TeamEditor,
+  credentials: CredentialsEditor,
+  works: WorksEditor,
+  areas: AreasEditor,
+  faq: FaqEditor,
+  reviews: ReviewsEditor
 };
 
 export const ContentEditorModal: React.FC<{ tab: ContentTab; title?: string; onClose: () => void }> = ({ tab, title, onClose }) => {

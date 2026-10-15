@@ -81,6 +81,74 @@ export interface SiteImages {
   pasture: string;
 }
 
+export interface AboutFact {
+  id: string;
+  value: string;
+  label: string;
+}
+
+export interface AboutBlock {
+  title: string;
+  text: string;
+  image: string;
+  facts: AboutFact[];
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  photo?: string;
+}
+
+export interface Credential {
+  id: string;
+  kind: 'license' | 'certificate';
+  title: string;
+  number: string;
+  issuedBy: string;
+  date: string;
+  image?: string;
+  file?: string; // PDF
+}
+
+export interface WorkItem {
+  id: string;
+  title: string;
+  desc: string;
+  date: string;
+  image?: string;
+}
+
+export interface ServiceZone {
+  id: string;
+  name: string;
+  desc: string;
+}
+
+export interface AreasBlock {
+  intro: string;
+  /** Картада көрсөтүлө турган жер: аталышы («Ноокат, Ош облусу») же координата («40.26, 72.62») */
+  mapQuery: string;
+  mapZoom: number;
+  zones: ServiceZone[];
+}
+
+export interface FaqItem {
+  id: string;
+  q: string;
+  a: string;
+}
+
+export interface ContactsBlock {
+  /** WhatsApp номери, мис. 996700123456 (бош болсо WhatsApp баскычы көрүнбөйт) */
+  whatsapp: string;
+  whatsappMessage: string;
+  /** Чалуу баскычынын номери (бош болсо диспетчердин номери колдонулат) */
+  callPhone: string;
+  showFloating: boolean;
+}
+
 export interface SiteContent {
   news: NewsItem[];
   documents: DocumentItem[];
@@ -92,6 +160,13 @@ export interface SiteContent {
   images: SiteImages;
   /** Сайттагы майда тексттердин админ өзгөрткөн варианттары: баштапкы текст → жаңы текст */
   texts: Record<string, string>;
+  about: AboutBlock;
+  team: TeamMember[];
+  credentials: Credential[];
+  works: WorkItem[];
+  areas: AreasBlock;
+  faq: FaqItem[];
+  contacts: ContactsBlock;
 }
 
 export const CONTENT_KEYS: (keyof SiteContent)[] = [
@@ -103,7 +178,14 @@ export const CONTENT_KEYS: (keyof SiteContent)[] = [
   'wasteSchedule',
   'heroStats',
   'images',
-  'texts'
+  'texts',
+  'about',
+  'team',
+  'credentials',
+  'works',
+  'areas',
+  'faq',
+  'contacts'
 ];
 
 export const newId = () => Math.random().toString(36).slice(2, 10);
@@ -194,7 +276,66 @@ export const DEFAULT_CONTENT: SiteContent = {
     hero: 'images/tazalyk_hero_village_1791715414641.jpg',
     pasture: 'images/tazalyk_pasture_landscape_1791715452252.jpg'
   },
-  texts: {}
+  texts: {},
+  about: {
+    title: '«Тазалык» муниципалдык ишканасы жөнүндө',
+    text:
+      'Айыл өкмөтүнүн карамагындагы «Тазалык» муниципалдык ишканасы айыл аймагын тазалоо, калкты ичүүчү таза суу менен камсыздоо, таштанды чыгаруу, жайыттарды башкаруу жана атайын техника кызматтарын көрсөтөт.\n\nБиздин максат — ар бир үй-бүлөгө сапаттуу, өз убагында жана ачык-айкын коммуналдык кызмат көрсөтүү.',
+    image: '',
+    facts: []
+  },
+  team: [],
+  credentials: [],
+  works: [],
+  areas: {
+    intro: 'Ишкана төмөнкү айылдарды жана участокторду тейлейт. Дарегиңиз тизмеде жок болсо, диспетчерге чалып тактаңыз.',
+    mapQuery: '',
+    mapZoom: 12,
+    zones: []
+  },
+  faq: [
+    {
+      id: 'faq-1',
+      q: 'Суу же таштанды үчүн карызымды кантип билем?',
+      a: '«Онлайн төлөм» бөлүмүнө квитанциядагы лицевой эсебиңиздин номерин жазыңыз — карызыңыз жана акыркы төлөмдөрүңүз көрсөтүлөт.'
+    },
+    {
+      id: 'faq-2',
+      q: 'Кызмат акысын кайда төлөсө болот?',
+      a: 'Ишкананын кассасында. Онлайн төлөм туташтырылганда бул жерде жарыяланат.'
+    },
+    {
+      id: 'faq-3',
+      q: 'Суу эсептегичтин (водомердин) көрсөткүчүн кантип жөнөтөм?',
+      a: '«Суу & Калдыктар» бөлүмүндө лицевой эсебиңизди жана эсептегичтеги учурдагы санды жазып жөнөтөсүз. Сарпталган суу жана төлөм суммасы өзү эсептелет.'
+    },
+    {
+      id: 'faq-4',
+      q: 'Суу түтүгү жарылса же суу келбей калса эмне кылам?',
+      a: 'Сайттагы «Авария / Арыз» баскычы аркылуу дарегиңизди жана көйгөйдү жазыңыз же диспетчерге чалыңыз. Арызыңызга номер берилет, анын абалын ошол номер менен текшересиз.'
+    },
+    {
+      id: 'faq-5',
+      q: 'Таштанды качан чыгарылат?',
+      a: '«Суу & Калдыктар» → «Калдыктар жана график» бөлүмүндө көчөлөр боюнча апталык график жарыяланган.'
+    },
+    {
+      id: 'faq-6',
+      q: 'Техниканы же суу түтүгүн оңдоо кызматын кантип заказ кылам?',
+      a: '«Атайын техника» бөлүмүнөн керектүү кызматты тандап, «Ижарага алуу / Смета эсептөө» баскычын басыңыз. Болжолдуу баасы дароо эсептелет, ишкана сиз менен байланышат.'
+    },
+    {
+      id: 'faq-7',
+      q: 'Жайыт билетин кантип алам?',
+      a: '«Жайыт пайдалануу» бөлүмүндө малдын санын жазып, акысын эсептеп, жайыт билетин тариздей аласыз.'
+    }
+  ],
+  contacts: {
+    whatsapp: '',
+    whatsappMessage: 'Саламатсызбы! «Тазалык» ишканасына суроом бар эле.',
+    callPhone: '',
+    showFloating: true
+  }
 };
 
 // Базадан келген маалыматты баштапкы маанилер менен айкалыштыруу
