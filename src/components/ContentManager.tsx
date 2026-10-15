@@ -667,7 +667,7 @@ export const MachineForm: React.FC<{ initial: MachineryItem; isNew: boolean; onC
               <option value="excavator">Экскаватор</option>
               <option value="heavy_truck">Оор жүк ташуучу</option>
               <option value="light_truck">Жеңил жүк ташуучу</option>
-              <option value="special">Атайын техника</option>
+              <option value="special">Суу түтүгү / суу кампасын оңдоо</option>
             </select>
           </div>
           <div>

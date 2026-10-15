@@ -402,8 +402,8 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                         />
                         <span className="text-[10px] text-stone-400 mt-0.5 block">
                           {meterSubscriber
-                            ? 'Ишкананын базасындагы акыркы көрсөткүч'
-                            : 'Эсеп номерин жазсаңыз, базадан автоматтык түрдө алынат'}
+                            ? <T>Ишкананын базасындагы акыркы көрсөткүч</T>
+                            : <T>Эсеп номерин жазсаңыз, базадан автоматтык түрдө алынат</T>}
                         </span>
                       </div>
 
@@ -607,7 +607,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-amber-50/50 border border-amber-100">
                       <div>
                         <label className="block text-stone-900 font-bold mb-1">
-                          {commercialType === 'commercial' ? 'Сарпталган көлөм (м³):' : 'Короо-бакча аянты (сотых):'}
+                          {commercialType === 'commercial' ? <T>Сарпталган көлөм (м³):</T> : <T>Короо-бакча аянты (сотых):</T>}
                         </label>
                         <input
                           type="number"
@@ -643,7 +643,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                     <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div>
                         <div className="text-[11px] text-stone-500">
-                          {commercialType === 'commercial' ? 'Коммерциялык эсеп' : 'Сугат суу эсеби'} · Тариф: <span className="font-mono font-bold text-amber-800">{activeCommRate} сом</span>
+                          {commercialType === 'commercial' ? <T>Коммерциялык эсеп</T> : <T>Сугат суу эсеби</T>} · <T>Тариф:</T> <span className="font-mono font-bold text-amber-800">{activeCommRate} сом</span>
                         </div>
                         <div className="text-xl font-black text-stone-950 font-mono tabular-nums mt-0.5">
                           <T>Төлөм суммасы:</T> {calculatedCommercialCost.toLocaleString('ru-RU')} сом

@@ -1,3 +1,4 @@
+import { T } from './AdminInline';
 import React from 'react';
 import { Phone, CreditCard, AlertTriangle, Menu, X, ShieldCheck, Settings } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -120,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
                     : 'text-stone-600 hover:text-stone-950'
                 }`}
               >
-                {item.label}
+                <T>{item.label}</T>
               </button>
             );
           })}
@@ -160,7 +161,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-stone-700 hover:bg-stone-50'
               }`}
             >
-              {item.label}
+              <T>{item.label}</T>
             </button>
           ))}
           <div className="pt-2 border-t border-stone-100 flex flex-col gap-2">

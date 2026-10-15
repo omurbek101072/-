@@ -8,10 +8,11 @@ React + Vite + Tailwind, маалымат базасы — [Supabase](https://su
 1. **Базаны түзүү.** Supabase → **SQL Editor** → **New query**. `supabase/schema.sql` файлын толугу менен көчүрүп салып, **Run** басыңыз.
 2. **Админ башкаруу.** Жаңы query'ге `supabase/002_admin_management.sql` салып **Run**.
 3. **Мазмун жана файлдар.** Жаңы query'ге `supabase/003_content.sql` салып **Run** (жаңылыктар, отчеттор, сүрөттөр үчүн).
-4. **Баштапкы маалымат.** Жаңы query'ге `supabase/seed.sql` салып **Run** (сайттын тексттери, тарифтер, техника, жайыттар).
+4. **Кызматтар (жаңыртуу).** Мурунтан иштеп жаткан базада `supabase/004_services.sql` иштетиңиз — септик/водовоз алынып, суу түтүгү жана суу кампасын оңдоо кызматтары кошулат. Жаңы базада керек эмес (seed.sql'де бар).
+5. **Баштапкы маалымат.** Жаңы query'ге `supabase/seed.sql` салып **Run** (сайттын тексттери, тарифтер, техника, жайыттар).
    Сыноо үчүн демо абоненттер керек болсо — `supabase/demo_subscribers.sql` (кийин өчүрсөңүз болот).
-5. **Биринчи админ.** **Authentication → Users → Add user → Create new user**: email жана сырсөз жазып, **Auto Confirm User** белгилеңиз.
-6. **Аны админ кылуу.** SQL Editor'до (email'ди өзүңүздүкүнө алмаштырыңыз):
+6. **Биринчи админ.** **Authentication → Users → Add user → Create new user**: email жана сырсөз жазып, **Auto Confirm User** белгилеңиз.
+7. **Аны админ кылуу.** SQL Editor'до (email'ди өзүңүздүкүнө алмаштырыңыз):
    ```sql
    insert into public.admins (email) values ('сиздин@email.com');
    ```

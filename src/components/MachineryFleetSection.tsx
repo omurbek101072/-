@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MachineryItem, MachineryOrder } from '../types';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
-import { T, MachineAdminTools, AddMachineButton } from './AdminInline';
+import { T, MachineAdminTools, AddMachineButton, MachinePhotoButton } from './AdminInline';
 import { isValidKgPhone, PHONE_ERROR, todayIso } from '../utils/validation';
 import { Truck, Clock, Fuel, ShieldCheck, CheckCircle2, Calendar, Phone, ArrowRight, UserCheck, AlertCircle, X } from 'lucide-react';
 
@@ -146,7 +146,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               { id: 'excavator', label: 'Экскаваторлор' },
               { id: 'heavy_truck', label: 'Оор жүк (самосвал)' },
               { id: 'light_truck', label: 'Жеңил жүк' },
-              { id: 'special', label: 'Септик / Водовоз' }
+              { id: 'special', label: 'Суу түтүгү / Суу кампасы' }
             ].map(cat => (
               <button
                 key={cat.id}
@@ -158,7 +158,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                     : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
-                {cat.label}
+                <T>{cat.label}</T>
               </button>
             ))}
           </div>
@@ -201,6 +201,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                   <div className="absolute top-3 left-3 bg-stone-950/80 backdrop-blur-sm text-white px-2.5 py-1 rounded-md text-[11px] font-mono">
                     {machine.model}
                   </div>
+                  <MachinePhotoButton machine={machine} />
                   <div className="absolute top-3 right-3 bg-emerald-600 text-white px-2 py-0.5 rounded text-[10px] font-semibold">
                     {machine.status === 'бош' ? 'Иштөөгө даяр' : machine.status}
                   </div>

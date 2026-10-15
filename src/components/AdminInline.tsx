@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import { ContentEditorModal, ContentTab, MachineForm, EMPTY_MACHINE } from './ContentManager';
 import { MachineryItem } from '../data/mockData';
-import { Edit3, Plus, Trash2, X, Check, RotateCcw } from 'lucide-react';
+import { Edit3, Plus, Trash2, X, Check, RotateCcw, Camera } from 'lucide-react';
+import { uploadImage } from '../utils/media';
 
 /** Админ кирип, «Түзөтүү режими» күйүк турганда гана true */
 export const useInlineEdit = () => {
@@ -54,7 +55,7 @@ export const T: React.FC<{ children: string; k?: string }> = ({ children, k }) =
             setOpen(true);
           }
         }}
-        className="inline-flex align-middle items-center justify-center ml-1 w-4 h-4 rounded-full bg-amber-400 hover:bg-amber-500 text-stone-950 cursor-pointer shadow-xs select-none shrink-0"
+        className="inline-flex align-middle items-center justify-center ml-1 w-5 h-5 sm:w-4 sm:h-4 rounded-full bg-amber-400 hover:bg-amber-500 text-stone-950 cursor-pointer shadow-xs select-none shrink-0"
         data-inline-edit="text"
       >
         <Edit3 className="w-2.5 h-2.5" />
@@ -253,5 +254,46 @@ export const AddMachineButton: React.FC = () => {
       </button>
       {form && <MachineForm initial={EMPTY_MACHINE()} isNew onClose={() => setForm(false)} />}
     </>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Техниканын сүрөтүн карточканын өзүнөн бир басуу менен алмаштыруу
+// ---------------------------------------------------------------------------
+export const MachinePhotoButton: React.FC<{ machine: MachineryItem }> = ({ machine }) => {
+  const { updateMachineryItem } = useApp();
+  const editing = useInlineEdit();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!editing) return null;
+  const inputId = `mphoto-${machine.id}`;
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const url = await uploadImage(file, 'machinery');
+      updateMachineryItem({ ...machine, image: url });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Сүрөт жүктөлгөн жок');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="absolute bottom-3 left-3 right-3 z-10 flex flex-col items-start gap-1" onClick={e => e.stopPropagation()}>
+      <label
+        htmlFor={inputId}
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-500 text-stone-950 text-xs font-bold shadow-md cursor-pointer ${busy ? 'opacity-70 pointer-events-none' : ''}`}
+        data-inline-edit="section"
+      >
+        <Camera className="w-3.5 h-3.5" />
+        <span>{busy ? 'Жүктөлүүдө…' : machine.image ? 'Сүрөттү алмаштыруу' : 'Сүрөт кошуу'}</span>
+      </label>
+      <input id={inputId} type="file" accept="image/*" className="sr-only" onChange={onFile} disabled={busy} />
+      {error && <span className="px-2 py-1 rounded bg-rose-600 text-white text-[11px] font-semibold">{error}</span>}
+    </div>
   );
 };
