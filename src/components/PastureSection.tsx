@@ -68,9 +68,10 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
             src={content.images.pasture}
             alt="Кыргыз жайлоосу жана жайыттары"
             referrerPolicy="no-referrer"
-            className="w-full h-56 sm:h-72 object-cover object-center opacity-70"
+            className="w-full h-56 sm:h-80 object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/50 to-transparent" />
+          {/* Ылдый жагын гана күңүрттөйбүз (аталыш окулушу үчүн), калганы тунук */}
+          <div className="absolute inset-0 bg-gradient-to-t from-stone-950/85 via-stone-950/25 to-transparent" />
           <div className="absolute top-3 right-3 z-10">
             <SectionEditButton tab="home" label="Сүрөттү алмаштыруу" title="Сүрөттөр" />
           </div>

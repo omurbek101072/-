@@ -25,9 +25,13 @@ export const Hero: React.FC<HeroProps> = ({
           src={content.images.hero}
           alt="Кыргыз айылынын көрүнүшү жана таза көчөлөрү"
           referrerPolicy="no-referrer"
-          className="w-full h-full object-cover object-center scale-105 transition-transform duration-1000"
+          className="w-full h-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-stone-950/95 via-stone-950/80 to-stone-900/60" />
+        {/* Тексттин астын гана күңүрттөйбүз — сүрөттүн оң жагы тунук көрүнөт */}
+        <div className="absolute inset-0 bg-gradient-to-r from-stone-950/85 via-stone-950/55 to-stone-950/5" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-stone-950/70 to-transparent" />
+        {/* Телефондо текст бүт экранды ээлейт — бир аз күңүртүрөөк */}
+        <div className="absolute inset-0 bg-stone-950/35 sm:hidden" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-14 lg:py-20">

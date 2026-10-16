@@ -20,7 +20,10 @@ export const FloatingContact: React.FC = () => {
   const c = content.contacts;
   if (!c.showFloating) return null;
   const call = intlPhone(c.callPhone || siteSettings.dispatcherPhone || '');
-  const wa = intlPhone(c.whatsapp || '');
+  // WhatsApp: «Компания жана байланыш» бөлүмүндөгү номер, жок болсо сайттын жөндөөлөрүндөгү номер
+  // (баштапкы үлгү номер эсепке алынбайт)
+  const siteWa = siteSettings.whatsappPhone && siteSettings.whatsappPhone !== '+996 (702) 00-11-22' ? siteSettings.whatsappPhone : '';
+  const wa = intlPhone(c.whatsapp || siteWa);
   if (call.length < 6 && wa.length < 6) return null;
   const waHref = `https://wa.me/${wa}${c.whatsappMessage ? `?text=${encodeURIComponent(c.whatsappMessage)}` : ''}`;
 
