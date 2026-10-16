@@ -50,7 +50,6 @@ const Block: React.FC<{
   children: React.ReactNode;
 }> = ({ id, icon: Icon, title, tab, editLabel, empty, emptyText, children }) => {
   const editing = useInlineEdit();
-  if (empty && !editing) return null;
   return (
     <section id={id} className="scroll-mt-24 py-10 border-t border-stone-200 first:border-t-0">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
@@ -61,7 +60,13 @@ const Block: React.FC<{
         <SectionEditButton tab={tab} label={editLabel} />
       </div>
       {empty ? (
-        <p className="p-4 rounded-xl border border-dashed border-amber-300 bg-amber-50 text-xs text-amber-900">{emptyText}</p>
+        editing ? (
+          <p className="p-4 rounded-xl border border-dashed border-amber-300 bg-amber-50 text-xs text-amber-900">{emptyText}</p>
+        ) : (
+          <p className="p-4 rounded-xl border border-dashed border-stone-300 bg-white text-sm text-stone-500">
+            <T>Маалымат жакында кошулат.</T>
+          </p>
+        )
       ) : (
         children
       )}
@@ -253,7 +258,7 @@ export const AboutSection: React.FC = () => {
         </section>
 
         {/* 2. Команда */}
-        <Block id="about-team" icon={Users} title={<T>Биздин команда</T>} tab="team" editLabel="Команданы өзгөртүү" empty={team.length === 0} emptyText="Кызматкерлердин сүрөттөрү азырынча кошула элек (элге бул бөлүм көрүнбөйт).">
+        <Block id="about-team" icon={Users} title={<T>Биздин команда</T>} tab="team" editLabel="Команданы өзгөртүү" empty={team.length === 0} emptyText="Кызматкерлердин сүрөттөрү азырынча кошула элек Жогорудагы сары баскыч менен кошуңуз.">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {team.map(m => (
               <div key={m.id} className="rounded-2xl bg-white border border-stone-200 overflow-hidden text-center">
@@ -283,7 +288,7 @@ export const AboutSection: React.FC = () => {
           tab="credentials"
           editLabel="Лицензия / сертификат кошуу"
           empty={credentials.length === 0}
-          emptyText="Лицензиялар жана сертификаттар азырынча кошула элек (элге бул бөлүм көрүнбөйт)."
+          emptyText="Лицензиялар жана сертификаттар азырынча кошула элек Жогорудагы сары баскыч менен кошуңуз."
         >
           <div className="space-y-6">
             {licenses.length > 0 && (
@@ -302,7 +307,7 @@ export const AboutSection: React.FC = () => {
         </Block>
 
         {/* 4. Аткарылган иштер */}
-        <Block id="about-works" icon={Camera} title={<T>Аткарылган иштер</T>} tab="works" editLabel="Иштин сүрөтүн кошуу" empty={works.length === 0} emptyText="Аткарылган иштердин сүрөттөрү азырынча кошула элек (элге бул бөлүм көрүнбөйт).">
+        <Block id="about-works" icon={Camera} title={<T>Аткарылган иштер</T>} tab="works" editLabel="Иштин сүрөтүн кошуу" empty={works.length === 0} emptyText="Аткарылган иштердин сүрөттөрү азырынча кошула элек Жогорудагы сары баскыч менен кошуңуз.">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {works.map(w => (
               <figure key={w.id} className="rounded-2xl bg-white border border-stone-200 overflow-hidden">
@@ -373,7 +378,7 @@ export const AboutSection: React.FC = () => {
           tab="areas"
           editLabel="Аймактарды / картаны өзгөртүү"
           empty={areas.zones.length === 0 && !areas.mapQuery.trim()}
-          emptyText="Тейлөө аймактары жана карта азырынча кошула элек (элге бул бөлүм көрүнбөйт)."
+          emptyText="Тейлөө аймактары жана карта азырынча кошула элек Жогорудагы сары баскыч менен кошуңуз."
         >
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
             <div className="lg:col-span-2 space-y-3">
