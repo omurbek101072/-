@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
-import { T, SectionEditButton } from './AdminInline';
+import { T, SectionEditButton, PastureZoneTools, AddPastureZoneButton } from './AdminInline';
 import { downloadDocument, DOC_MISSING_MESSAGE } from '../utils/documents';
 import { Mountain, Calculator, FileText, CheckCircle2, Download, ExternalLink, ShieldCheck, MapPin, Compass, AlertCircle, ArrowRight } from 'lucide-react';
 
@@ -19,7 +19,11 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
   const [sheepCount, setSheepCount] = useState<number>(30); // кой-эчки
   const [yaksCount, setYaksCount] = useState<number>(0); // топоз
   const [periodType, setPeriodType] = useState<'season' | 'monthly'>('season'); // season is 5 months
-  const [selectedZone, setSelectedZone] = useState<string>(pastureZones[0]?.name || 'Үч-Эмчек жайлоосу');
+  const [selectedZone, setSelectedZone] = useState<string>(pastureZones[0]?.name || '');
+  // Жайлоонун аты өзгөрсө же өчсө — тандоону жаңыртабыз
+  useEffect(() => {
+    if (!pastureZones.some(z => z.name === selectedZone)) setSelectedZone(pastureZones[0]?.name || '');
+  }, [pastureZones]);
   const [herderName, setHerderName] = useState<string>('');
 
   // Tariff rates (сом)
@@ -343,10 +347,12 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
               <p className="text-xs text-stone-500 mb-4">
                 <T>Ар бир жайытка канча мал батарын жана анын абалын караңыз:</T>
               </p>
+              <AddPastureZoneButton />
+              {pastureZones.length === 0 && <p className="text-xs text-stone-400 mt-2">Жайлоолор азырынча кошула элек.</p>}
 
               <div className="space-y-3">
                 {pastureZones.map(zone => {
-                  const percent = Math.round((zone.currentGrazingHeads / zone.capacityHeads) * 100);
+                  const percent = zone.capacityHeads > 0 ? Math.min(100, Math.round((zone.currentGrazingHeads / zone.capacityHeads) * 100)) : 0;
                   return (
                     <div
                       key={zone.id}
@@ -391,6 +397,7 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
                         <span>Суу: {zone.waterSources}</span>
                         <span className="text-stone-400 font-medium"><T>Жооптуу:</T> {zone.manager}</span>
                       </div>
+                      <PastureZoneTools zone={zone} />
                     </div>
                   );
                 })}

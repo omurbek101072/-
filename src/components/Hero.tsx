@@ -2,7 +2,7 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 import { Droplets, Trash2, Mountain, Truck, CreditCard, ArrowRight } from 'lucide-react';
 import { EditableText } from './EditableText';
-import { T, SectionEditButton } from './AdminInline';
+import { T, SectionEditButton, HeroStatEdit } from './AdminInline';
 
 interface HeroProps {
   onSelectService: (serviceTab: string) => void;
@@ -77,10 +77,11 @@ export const Hero: React.FC<HeroProps> = ({
 
           {/* Trust stats strip */}
           <div className="mt-12 pt-6 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-4 text-left">
-            {content.heroStats.map(stat => (
+            {content.heroStats.map((stat, i) => (
               <div key={stat.id}>
                 <div className="text-2xl font-extrabold text-white font-mono tabular-nums">{stat.value}</div>
                 <div className="text-xs text-stone-400 mt-0.5">{stat.label}</div>
+                <HeroStatEdit index={i} />
               </div>
             ))}
           </div>

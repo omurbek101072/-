@@ -146,6 +146,8 @@ interface AppContextType {
   updateTariffs: (newTariffs: TariffConfig) => void;
   updateSiteSettings: (updates: Partial<SiteSettings>) => void;
   updatePastureZone: (zoneId: string, updates: Partial<PastureZone>) => void;
+  addPastureZone: (zone: PastureZone) => void;
+  deletePastureZone: (zoneId: string) => void;
   loginAdmin: (email: string, password: string) => Promise<Result>;
   registerAdmin: (email: string, password: string) => Promise<Result>;
   requestPasswordReset: (email: string) => Promise<Result>;
@@ -213,7 +215,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (t) setTariffs({ ...INITIAL_TARIFFS, ...t.value });
     // Сүрөт жолдорун салыштырмалуу кылабыз (сайт папкадан ачылса да иштеши үчүн)
     if (machines.length) setMachineryCatalog(machines.map(m => ({ ...m.data, image: m.data.image?.replace(/^\/images\//, 'images/') })));
-    if (zones.length) setPastureZones(zones.map(z => z.data));
+    setPastureZones(zones.map(z => z.data));
     setTransactions(recent || []);
     // Мазмун блоктору (003_content.sql иштетиле элек болсо — баштапкы тексттер калат)
     try {
@@ -475,6 +477,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     persist(db.upsert('site_config', { key: 'site_settings', value: merged, updated_at: new Date().toISOString() }));
   };
 
+  const addPastureZone = (zone: PastureZone) => {
+    setPastureZones(prev => [...prev, zone]);
+    persist(db.upsert('pasture_zones', { id: zone.id, data: zone, sort: pastureZones.length }));
+  };
+  const deletePastureZone = (zoneId: string) => {
+    setPastureZones(prev => prev.filter(z => z.id !== zoneId));
+    persist(db.remove('pasture_zones', `id=eq.${enc(zoneId)}`));
+  };
+
   const updatePastureZone = (zoneId: string, updates: Partial<PastureZone>) => {
     const current = pastureZones.find(z => z.id === zoneId);
     if (!current) return;
@@ -683,6 +694,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateTariffs,
         updateSiteSettings,
         updatePastureZone,
+        addPastureZone,
+        deletePastureZone,
         loginAdmin,
         registerAdmin,
         requestPasswordReset,
