@@ -31,7 +31,7 @@ export const ReportsSection: React.FC = () => {
         <div className="max-w-3xl mb-10">
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 uppercase tracking-wider">
             <FileText className="w-4 h-4" />
-            <span><T>Ачык өкмөт · Финансылык айкындуулук</T></span>
+            <span><T>Ачык-айкындуулук</T></span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 mt-1" style={{ textWrap: 'balance' }}>
             <EditableText settingKey="reportsSectionTitle" label="Отчеттор бөлүмү башкы аталышы" />
@@ -90,7 +90,7 @@ export const ReportsSection: React.FC = () => {
             {/* Totals */}
             <div className="p-4 bg-stone-50 rounded-xl border border-stone-200 flex items-center justify-between text-xs">
               <div>
-                <span className="text-stone-500 block text-[11px]"><T>Жалпы жылдык жыйым:</T></span>
+                <span className="text-stone-500 block text-[11px]"><T>Жылдык киреше:</T></span>
                 <span className="text-xl font-extrabold text-stone-900 font-mono tabular-nums">
                   {total.toLocaleString('ru-RU')} сом
                 </span>
@@ -107,7 +107,7 @@ export const ReportsSection: React.FC = () => {
             <div>
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <h4 className="text-xs font-bold text-stone-900">
-                  <T>Жүктөп алууга жеткиликтүү расмий документтер:</T>
+                  <T>Расмий документтер:</T>
                 </h4>
                 <SectionEditButton tab="documents" label="Документтерди өзгөртүү / PDF кошуу" title="Документтер" />
               </div>

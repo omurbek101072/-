@@ -235,7 +235,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 uppercase tracking-wider">
-              <span><T>Айылдык инфраструктура</T></span>
+              <span><T>Коммуналдык кызматтар</T></span>
               <span aria-hidden="true">·</span>
               <span><T>Жашоо шарттары</T></span>
             </div>
@@ -299,17 +299,17 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-xs font-bold text-cyan-800 uppercase">
                       <Droplets className="w-4 h-4" />
-                      <span><T>Онлайн суу эсеби жана төлөм</T></span>
+                      <span><T>Суу акысы</T></span>
                     </div>
                     <span className="text-[11px] font-semibold text-cyan-900 bg-cyan-50 px-2.5 py-0.5 rounded-full border border-cyan-150">
                       2026-жылкы расмий тарифтер
                     </span>
                   </div>
                   <h3 className="text-lg font-bold text-stone-900 mt-1">
-                    <T>Таза суунун төлөмүн эсептөө жана көрсөткүч тапшыруу</T>
+                    <T>Суу акысын эсептөө жана көрсөткүч жөнөтүү</T>
                   </h3>
                   <p className="text-xs text-stone-500 mt-0.5">
-                    <T>Категорияңызды тандап, көрсөткүчтөрдү же адам санын киргизип, так сумманы чыгарыңыз</T>
+                    <T>Түрүн тандап, водомердин көрсөткүчүн же үй-бүлөнүн санын жазыңыз — сумма өзү эсептелет</T>
                   </p>
 
                   {/* 3 Sub-tabs for Calculator */}
@@ -402,14 +402,14 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                         />
                         <span className="text-[10px] text-stone-400 mt-0.5 block">
                           {meterSubscriber
-                            ? <T>Ишкананын базасындагы акыркы көрсөткүч</T>
-                            : <T>Эсеп номерин жазсаңыз, базадан автоматтык түрдө алынат</T>}
+                            ? <T>Ишканада катталган акыркы көрсөткүч</T>
+                            : <T>Эсеп номерин жазсаңыз, өзү толтурулат</T>}
                         </span>
                       </div>
 
                       <div>
                         <label className="block text-stone-900 font-bold mb-1">
-                          <T>Жаңы көрсөткүч (бүгүнкү, м³):</T>
+                          <T>Бүгүнкү көрсөткүч (м³):</T>
                         </label>
                         <input
                           type="number"
@@ -418,7 +418,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                           onChange={(e) => setCurrentReading(Math.max(0, Number(e.target.value) || 0))}
                           className="w-full px-3 py-2 bg-white border border-cyan-400 rounded-lg font-mono font-extrabold text-cyan-900 text-sm focus:ring-2 focus:ring-cyan-600 focus:outline-none"
                         />
-                        <span className="text-[10px] text-cyan-700 mt-0.5 block"><T>Эсептегичтен (водомерден) карап жазыңыз</T></span>
+                        <span className="text-[10px] text-cyan-700 mt-0.5 block"><T>Водомерден карап жазыңыз</T></span>
                       </div>
                     </div>
 
@@ -449,7 +449,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                           onClick={handlePayWaterNow}
                           className="flex-1 sm:flex-none px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs shadow-xs cursor-pointer transition-colors"
                         >
-                          <T>Дароо онлайн төлөө</T>
+                          <T>Төлөөгө өтүү</T>
                         </button>
                       </div>
                     </div>
@@ -578,7 +578,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-stone-700 font-semibold mb-1">
-                          <T>Ишкана же абоненттин коду:</T>
+                          <T>Абоненттин коду:</T>
                         </label>
                         <input
                           type="text"
@@ -591,7 +591,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
 
                       <div>
                         <label className="block text-stone-700 font-semibold mb-1">
-                          <T>Пайдалануунун багыты:</T>
+                          <T>Эмнеге колдонулат:</T>
                         </label>
                         <select
                           value={commercialType}
@@ -668,10 +668,10 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                   <div className="flex items-center justify-between border-b border-stone-100 pb-2.5">
                     <div>
                       <h3 className="text-sm font-bold text-stone-900">
-                        <T>Таза суунун расмий тарифтери (2026)</T>
+                        <T>Суунун тарифтери</T>
                       </h3>
                       <p className="text-[11px] text-stone-500">
-                        <T>Айылдык Кеңештин токтому менен бекитилген</T>
+                        <T>Айылдык кеңеш бекиткен</T>
                       </p>
                     </div>
 
@@ -794,7 +794,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                           </span>
                         </div>
                         <p className="text-[11px] text-stone-600 mt-1 leading-snug">
-                          <T>Чындыгында сарпталган суунун көлөмү боюнча гана төлөнөт.</T>
+                          <T>Водомер көрсөткөн көлөм үчүн гана төлөйсүз.</T>
                         </p>
                         <div className="mt-2 pt-2 border-t border-cyan-100 flex items-center justify-between">
                           <span className="text-[10px] text-stone-500"><T>Мисалы: 10 м³ сарпталса =</T> {(10 * waterRate).toFixed(0)} сом</span>
@@ -825,7 +825,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                           </span>
                         </div>
                         <p className="text-[11px] text-stone-600 mt-1 leading-snug">
-                          <T>Үй-бүлө мүчөлөрүнүн расмий катталган саны боюнча эсептелет.</T>
+                          <T>Үйдө катталган адамдардын санына жараша эсептелет.</T>
                         </p>
                         <div className="mt-2 pt-2 border-t border-emerald-100 flex items-center justify-between">
                           <span className="text-[10px] text-stone-500"><T>Мисалы: 4 адам =</T> {4 * waterWithoutMeterRate} сом/ай</span>
@@ -891,7 +891,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                       onClick={onOpenCitizenRequest}
                       className="text-xs font-bold text-rose-700 hover:underline cursor-pointer"
                     >
-                      <T>Авариялык арыз калтыруу</T>
+                      <T>Авария тууралуу кабарлоо</T>
                     </button>
                   </div>
                 </div>
@@ -900,10 +900,10 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                 <div className="p-4 rounded-2xl bg-cyan-900 text-white text-xs space-y-2">
                   <div className="flex items-center gap-2 font-bold text-cyan-300">
                     <ShieldCheck className="w-4 h-4" />
-                    <span><T>Суунун сапаты 100% көзөмөлдө</T></span>
+                    <span><T>Суунун сапаты</T></span>
                   </div>
                   <p className="text-cyan-100 leading-relaxed text-[11px]">
-                    <T>Айылдын ичүүчү суусу ай сайын Санэпидемстанция (СЭС) лабораториясында бактериологиялык жана химиялык текшерүүдөн өтүп турат. Суу таза жана ичүүгө жарактуу.</T>
+                    <T>Ичүүчү суунун сапатын санитардык кызмат текшерет. Суунун түсү же жыты өзгөрсө, дароо диспетчерге кабарлаңыз.</T>
                   </p>
                   <div className="pt-1 flex items-center gap-2 text-[10px] text-cyan-200">
                     <Phone className="w-3 h-3" />
@@ -936,10 +936,10 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                 <div>
                   <h3 className="text-base font-bold text-stone-900 flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-emerald-700" />
-                    <span><T>Таштанды чыгаруу графиги (көчөлөр боюнча)</T></span>
+                    <span><T>Таштанды чыгаруу графиги</T></span>
                   </h3>
                   <p className="text-xs text-stone-500 mt-0.5">
-                    <T>Сураныч, таштанды челектерин жана каптарын көрсөтүлгөн күнү эртең менен саат 08:00гө чейин дарбаза алдына чыгарып коюңуздар</T>
+                    <T>Таштандыны графиктеги күнү эртең менен саат 8:00гө чейин дарбаза алдына чыгарып коюңуз</T>
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -955,9 +955,9 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                   <thead className="bg-stone-50 text-stone-500 uppercase tracking-wider text-[11px] border-y border-stone-200">
                     <tr>
                       <th className="py-2.5 px-4 font-bold text-stone-900"><T>Апта күнү</T></th>
-                      <th className="py-2.5 px-4"><T>Тейленүүчү көчөлөр жана кварталдар</T></th>
+                      <th className="py-2.5 px-4"><T>Көчөлөр</T></th>
                       <th className="py-2.5 px-4"><T>Убактысы</T></th>
-                      <th className="py-2.5 px-4"><T>Бригада / Техника</T></th>
+                      <th className="py-2.5 px-4"><T>Техника</T></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100">
@@ -994,10 +994,10 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
               <div className="lg:col-span-6 bg-white rounded-2xl p-6 border border-stone-200 shadow-sm space-y-4">
                 <div className="border-b border-stone-100 pb-3">
                   <h4 className="text-sm font-bold text-stone-900">
-                    <T>Ири көлөмдөгү таштанды чыгарууга буйрутма берүү</T>
+                    <T>Ири таштандыны чыгартуу</T>
                   </h4>
                   <p className="text-xs text-stone-500 mt-0.5">
-                    <T>Курулуш калдыктары, бак-дарактардын бутактары же эски эмеректер үчүн КамАЗ же Портер чакыруу</T>
+                    <T>Курулуш калдыгы, бутак же эски эмерек болсо — КамАЗ же Портер чакырыңыз</T>
                   </p>
                 </div>
 
@@ -1045,7 +1045,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                     type="submit"
                     className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs shadow-xs transition-colors cursor-pointer"
                   >
-                    <T>Өтүнмө калтыруу</T>
+                    <T>Заказ жөнөтүү</T>
                   </button>
                 </form>
               </div>
@@ -1053,30 +1053,30 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
               {/* Sorting & Eco Guidelines (6 cols) */}
               <div className="lg:col-span-6 bg-white rounded-2xl p-6 border border-stone-200 shadow-sm space-y-4">
                 <h4 className="text-sm font-bold text-stone-900">
-                  <T>Таштандыны сорттоо жана экологиялык талаптар</T>
+                  <T>Таштанды боюнча эрежелер</T>
                 </h4>
                 <div className="space-y-3 text-xs text-stone-600">
                   <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 flex items-start gap-3">
                     <div className="w-6 h-6 rounded-md bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 font-bold">1</div>
                     <div>
-                      <strong className="text-stone-900 block"><T>Пластик жана баклажкаларды өзүнчө чогултуу</T></strong>
-                      <p className="text-[11px] mt-0.5"><T>Айылдагы атайын тор челектерге пресстеп таштаңыз, алар кайра иштетүүгө кетет.</T></p>
+                      <strong className="text-stone-900 block"><T>Пластикти өзүнчө чогултуңуз</T></strong>
+                      <p className="text-[11px] mt-0.5"><T>Бөтөлкөлөрдү кысып, атайын тор челектерге салыңыз.</T></p>
                     </div>
                   </div>
 
                   <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 flex items-start gap-3">
                     <div className="w-6 h-6 rounded-md bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 font-bold">2</div>
                     <div>
-                      <strong className="text-stone-900 block"><T>Күл жана күйүп жаткан нерселерди салбоо</T></strong>
-                      <p className="text-[11px] mt-0.5"><T>Өрт коопсуздугу үчүн сууп калган гана күлдү бекем каптарга салып чыгаруу зарыл.</T></p>
+                      <strong className="text-stone-900 block"><T>Ысык күлдү салбаңыз</T></strong>
+                      <p className="text-[11px] mt-0.5"><T>Өрт чыкпашы үчүн күл толук муздагандан кийин бекем капка салып чыгарыңыз.</T></p>
                     </div>
                   </div>
 
                   <div className="p-3 rounded-xl bg-stone-50 border border-stone-200 flex items-start gap-3">
                     <div className="w-6 h-6 rounded-md bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 font-bold">3</div>
                     <div>
-                      <strong className="text-stone-900 block"><T>Арыктарга таштанды таштоого тыюу салынат</T></strong>
-                      <p className="text-[11px] mt-0.5"><T>Арыкка же жол четине таштанды таштагандарга 5,500 сомдон 17,000 сомго чейин айып салынат.</T></p>
+                      <strong className="text-stone-900 block"><T>Арыкка таштанды таштабаңыз</T></strong>
+                      <p className="text-[11px] mt-0.5"><T>Арыкка же жол четине таштанды таштагандарга мыйзам боюнча айып салынат.</T></p>
                     </div>
                   </div>
                 </div>

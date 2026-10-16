@@ -216,7 +216,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
         {/* Section title */}
         <div className="max-w-3xl mb-8">
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 uppercase tracking-wider">
-            <span><T>Санариптик кызматтар</T></span>
+            <span><T>Онлайн кызматтар</T></span>
             <span aria-hidden="true">·</span>
             <span>24/7 Коопсуз төлөмдөр</span>
           </div>
@@ -449,7 +449,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                   <span><T>Лицевой эсеп тандалган жок</T></span>
                 </div>
                 <p>
-                  <T>Эгерде эсеп номериңизди билбесеңиз, оң жактагы формага аты-жөнүңүздү жана кызматты тандап түз төлөңүз.</T>
+                  <T>Эсеп номериңизди билбесеңиз, оң жактагы формага аты-жөнүңүздү жазып, кызматты тандаңыз.</T>
                 </p>
               </div>
             )}
@@ -540,7 +540,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
               </div>
 
               <div>
-                <label className="block font-semibold text-stone-700 mb-1"><T>Байланыш телефону (SMS чек үчүн):</T></label>
+                <label className="block font-semibold text-stone-700 mb-1"><T>Телефонуңуз:</T></label>
                 <input
                   type="text"
                   value={customPayerPhone}
@@ -657,7 +657,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                   <p className="text-[11px] text-stone-500 mt-0.5">
                     <T>Сумма:</T> <strong className="font-mono text-emerald-700 text-sm">{(customAmount || 0).toLocaleString('ru-RU')} сом</strong>
                   </p>
-                  <p className="text-[10px] text-stone-400"><T>Комиссия: 0 сом (айыл өкмөтү тарабынан субсидияланган)</T></p>
+                  <p className="text-[10px] text-stone-400"><T>Төлөгөндөн кийин электрондук квитанция берилет.</T></p>
                 </div>
               </div>
 
@@ -689,12 +689,12 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 uppercase tracking-wider">
                 <History className="w-4 h-4" />
-                <span><T>Ачык финансылык реестр</T></span>
+                <span><T>Ачык реестр</T></span>
               </div>
               <h3 className="text-lg font-bold text-stone-900 mt-0.5"><T>Акыркы төлөнгөн квитанциялар</T></h3>
             </div>
             <span className="text-xs text-stone-500">
-              <T>Төлөм жасалгандан кийин электрондук чек автоматтык түрдө жаралат</T>
+              <T>Төлөгөндөн кийин электрондук квитанция өзү түзүлөт</T>
             </span>
           </div>
 

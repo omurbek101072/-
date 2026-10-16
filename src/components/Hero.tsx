@@ -52,7 +52,7 @@ export const Hero: React.FC<HeroProps> = ({
               className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-950/40 transition-all text-sm cursor-pointer"
             >
               <CreditCard className="w-4 h-4" />
-              <span><T>Онлайн төлөм жүргүзүү</T></span>
+              <span><T>Карызды текшерүү жана төлөө</T></span>
             </button>
 
             <button
@@ -67,7 +67,7 @@ export const Hero: React.FC<HeroProps> = ({
               onClick={onOpenCitizenRequest}
               className="px-4 py-3 text-stone-300 hover:text-white text-sm font-medium transition-colors cursor-pointer"
             >
-              <T>Авариялык билдирүү жөнөтүү</T>
+              <T>Авария тууралуу кабарлоо</T>
             </button>
           </div>
 

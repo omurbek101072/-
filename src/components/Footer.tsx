@@ -76,7 +76,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={() => onNavClick('machinery')}
                   className="hover:text-white transition-colors cursor-pointer text-left"
                 >
-                  <T>Экскаватор жана КамАЗ ижарасы</T>
+                  <T>Техника ижарасы жана оңдоо</T>
                 </button>
               </li>
               <li>
@@ -84,7 +84,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={() => onNavClick('payments')}
                   className="hover:text-white transition-colors cursor-pointer text-left"
                 >
-                  <T>Онлайн төлөм жүргүзүү (MBank)</T>
+                  <T>Төлөм жана карызды текшерүү</T>
                 </button>
               </li>
             </ul>

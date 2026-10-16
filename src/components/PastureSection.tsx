@@ -108,10 +108,10 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
               <div>
                 <h3 className="text-base font-bold text-stone-900 flex items-center gap-2">
                   <Calculator className="w-5 h-5 text-emerald-700" />
-                  <span><T>Мал башы боюнча жайыт акысы калькулятору</T></span>
+                  <span><T>Жайыт акысын эсептөө</T></span>
                 </h3>
                 <p className="text-xs text-stone-500 mt-0.5">
-                  <T>Айылдык кеңештин 2026-жылдагы токтому менен бекитилген тарифтер боюнча</T>
+                  <T>Айылдык кеңеш бекиткен тарифтер боюнча</T>
                 </p>
               </div>
 
@@ -147,7 +147,7 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
               {/* Cattle */}
               <div className="p-3.5 rounded-xl border border-stone-200 bg-stone-50/60 flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-bold text-stone-900"><T>Бодо мал (Уй, бука, өгүз)</T></div>
+                  <div className="text-xs font-bold text-stone-900"><T>Бодо мал (уй, бука, өгүз)</T></div>
                   <div className="text-[11px] text-stone-500">
                     <T>Тариф:</T> <strong className="font-mono text-emerald-800">{cattleRate} сом</strong> / 1 баш
                   </div>
@@ -183,7 +183,7 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
               {/* Horses */}
               <div className="p-3.5 rounded-xl border border-stone-200 bg-stone-50/60 flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-bold text-stone-900"><T>Жылкы (Айгыр, бээ, байтал)</T></div>
+                  <div className="text-xs font-bold text-stone-900"><T>Жылкы (айгыр, бээ, байтал)</T></div>
                   <div className="text-[11px] text-stone-500">
                     <T>Тариф:</T> <strong className="font-mono text-emerald-800">{horsesRate} сом</strong> / 1 баш
                   </div>
@@ -219,7 +219,7 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
               {/* Sheep & Goats */}
               <div className="p-3.5 rounded-xl border border-stone-200 bg-stone-50/60 flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-bold text-stone-900"><T>Майда жандык (Кой жана эчки)</T></div>
+                  <div className="text-xs font-bold text-stone-900"><T>Кой-эчки</T></div>
                   <div className="text-[11px] text-stone-500">
                     <T>Тариф:</T> <strong className="font-mono text-emerald-800">{sheepRate} сом</strong> / 1 баш
                   </div>
@@ -255,7 +255,7 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
               {/* Yaks */}
               <div className="p-3.5 rounded-xl border border-stone-200 bg-stone-50/60 flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-bold text-stone-900"><T>Топоз (Бийик тоолуу жайыт)</T></div>
+                  <div className="text-xs font-bold text-stone-900"><T>Топоз</T></div>
                   <div className="text-[11px] text-stone-500">
                     <T>Тариф:</T> <strong className="font-mono text-emerald-800">{yaksRate} сом</strong> / 1 баш
                   </div>
@@ -292,7 +292,7 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
             {/* Pasture Zone Selection */}
             <div>
               <label className="block text-xs font-bold text-stone-800 mb-1">
-                <T>Жайыт участогун (жайлоону) тандаңыз:</T>
+                <T>Жайлоону тандаңыз:</T>
               </label>
               <select
                 value={selectedZone}
@@ -326,7 +326,7 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
                 onClick={handlePayTicket}
                 className="w-full sm:w-auto px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span><T>Онлайн төлөө жана Билет алуу</T></span>
+                <span><T>Билет алуу</T></span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -337,10 +337,10 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
             <div className="bg-white rounded-2xl p-5 border border-stone-200 shadow-sm">
               <h3 className="text-sm font-bold text-stone-900 mb-3 flex items-center gap-2">
                 <Compass className="w-4 h-4 text-emerald-700" />
-                <span><T>Айыл өкмөтүнүн жайыт контурлары</T></span>
+                <span><T>Жайыттар</T></span>
               </h3>
               <p className="text-xs text-stone-500 mb-4">
-                <T>Ар бир участок боюнча нормативдик мал башынын сыйымдуулугу жана экологиялык мониторинг:</T>
+                <T>Ар бир жайытка канча мал батарын жана анын абалын караңыз:</T>
               </p>
 
               <div className="space-y-3">
@@ -400,7 +400,7 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-1">
               <span className="font-bold block"><T>Эскертүү:</T></span>
               <p className="text-[11px] leading-relaxed">
-                <T>Жайытка малды билети жок чыгарууга тыюу салынат. Мыйзамсыз жайылган ар бир баш малга айып пул салынат (КР «Жайыттар жөнүндө» Мыйзамы).</T>
+                <T>Малды жайытка билетсиз чыгарууга болбойт. Билетсиз жайылган мал үчүн ээсине айып салынышы мүмкүн (КР «Жайыттар жөнүндө» Мыйзамы).</T>
               </p>
             </div>
           </div>
@@ -412,7 +412,7 @@ export const PastureSection: React.FC<PastureSectionProps> = ({ onDirectPayment 
             <div>
               <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 uppercase tracking-wider">
                 <FileText className="w-4 h-4" />
-                <span><T>Элдик ачык көзөмөл</T></span>
+                <span><T>Ачык отчет</T></span>
               </div>
               <h3 className="text-xl font-bold text-stone-900 mt-1">{report.title}</h3>
               <SectionEditButton tab="pasture" label="Жайыт отчетун өзгөртүү" title="Жайыт отчету" className="mt-2" />

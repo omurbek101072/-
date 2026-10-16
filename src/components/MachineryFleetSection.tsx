@@ -128,7 +128,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800 uppercase tracking-wider">
               <Truck className="w-4 h-4" />
-              <span><T>Муниципалдык автопарк</T></span>
+              <span><T>Ишкананын техникасы</T></span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 mt-1" style={{ textWrap: 'balance' }}>
               <EditableText settingKey="machinerySectionTitle" label="Атайын техника башкы аталышы" />
@@ -270,7 +270,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                   className="w-full py-2.5 bg-stone-900 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                 >
                   <Calendar className="w-3.5 h-3.5" />
-                  <span><T>Ижарага алуу / Смета эсептөө</T></span>
+                  <span><T>Заказ берүү</T></span>
                 </button>
               </div>
             </div>
@@ -284,8 +284,8 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="font-bold text-stone-900"><T>Расмий келишим жана дүмүрчөк</T></h4>
-              <p className="mt-0.5"><T>Кызматтар айыл өкмөттүн расмий тарифи менен көрсөтүлүп, бардык каржылык документтер берилет.</T></p>
+              <h4 className="font-bold text-stone-900"><T>Келишим жана квитанция</T></h4>
+              <p className="mt-0.5"><T>Баасы бекитилген тариф боюнча. Төлөгөндөн кийин квитанция берилет.</T></p>
             </div>
           </div>
 
@@ -294,8 +294,8 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               <Clock className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="font-bold text-stone-900"><T>Өз убагында жеткирүү</T></h4>
-              <p className="mt-0.5"><T>Заказ кабыл алынгандан кийин техника көрсөтүлгөн дарекке графикке ылайык өз убагында келет.</T></p>
+              <h4 className="font-bold text-stone-900"><T>Убагында келет</T></h4>
+              <p className="mt-0.5"><T>Заказ кабыл алынгандан кийин техника макулдашылган убакта дарегиңизге барат.</T></p>
             </div>
           </div>
 
@@ -304,8 +304,8 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               <Fuel className="w-4 h-4" />
             </div>
             <div>
-              <h4 className="font-bold text-stone-900"><T>Тажрыйбалуу операторлор</T></h4>
-              <p className="mt-0.5"><T>Бардык техникаларды 5+ жылдык тажрыйбасы бар кесипкөй айдоочулар башкарат.</T></p>
+              <h4 className="font-bold text-stone-900"><T>Айдоочусу менен</T></h4>
+              <p className="mt-0.5"><T>Техника ишкананын айдоочусу же оператору менен берилет.</T></p>
             </div>
           </div>
         </div>
@@ -319,7 +319,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
             <div className="bg-stone-900 text-white p-5 flex items-center justify-between">
               <div>
                 <span className="text-[11px] text-emerald-400 font-semibold uppercase tracking-wider block">
-                  <T>Техниканы ижарага алуу өтүнмөсү</T>
+                  <T>Техникага заказ</T>
                 </span>
                 <h3 className="font-bold text-base text-white mt-0.5">{bookingItem.name}</h3>
                 <p className="text-xs text-stone-300 font-mono">{bookingItem.model}</p>
@@ -458,7 +458,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
               </div>
 
               <div>
-                <label className="block text-stone-700 font-semibold mb-1"><T>Иштин түрү жана тапшырма:</T></label>
+                <label className="block text-stone-700 font-semibold mb-1"><T>Эмне иш керек:</T></label>
                 <input
                   type="text"
                   value={workDescription}
@@ -488,7 +488,7 @@ export const MachineryFleetSection: React.FC<MachineryFleetSectionProps> = ({ on
                     disabled={isSending}
                     className="disabled:opacity-60 px-3 py-2 bg-stone-800 hover:bg-stone-900 text-white font-semibold rounded-lg text-xs cursor-pointer shadow-xs"
                   >
-                    <T>Өтүнмө калтыруу</T>
+                    <T>Заказ жөнөтүү</T>
                   </button>
                   <button
                     type="button"
