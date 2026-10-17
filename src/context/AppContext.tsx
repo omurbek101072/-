@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   SubscriberAccount,
   MachineryItem,
@@ -171,6 +171,10 @@ const errText = (e: unknown) => (e instanceof Error ? e.message : 'Белгис�
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Ачык маалымат: сервер жооп бергиче баштапкы тексттер көрсөтүлөт
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(INITIAL_SITE_SETTINGS);
+  const settingsRef = useRef<SiteSettings>(INITIAL_SITE_SETTINGS);
+  useEffect(() => {
+    settingsRef.current = siteSettings;
+  }, [siteSettings]);
   const [tariffs, setTariffs] = useState<TariffConfig>(INITIAL_TARIFFS);
   const [machineryCatalog, setMachineryCatalog] = useState<MachineryItem[]>(MACHINERY_CATALOG);
   const [pastureZones, setPastureZones] = useState<PastureZone[]>(PASTURE_ZONES);
@@ -472,7 +476,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateSiteSettings = (updates: Partial<SiteSettings>) => {
-    const merged = { ...siteSettings, ...updates };
+    // Акыркы абалдын үстүнө гана кошобуз (эски көчүрмө менен үстүнө жазып жибербеш үчүн)
+    const merged = { ...settingsRef.current, ...updates };
+    settingsRef.current = merged;
     setSiteSettings(merged);
     persist(db.upsert('site_config', { key: 'site_settings', value: merged, updated_at: new Date().toISOString() }));
   };

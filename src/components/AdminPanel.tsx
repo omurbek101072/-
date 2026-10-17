@@ -260,7 +260,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
 
   const handleSaveSiteSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    updateSiteSettings(localSiteSettings);
+    const changed: Partial<typeof localSiteSettings> = {};
+    (Object.keys(localSiteSettings) as (keyof typeof localSiteSettings)[]).forEach(k => {
+      if (localSiteSettings[k] !== siteSettings[k]) (changed as any)[k] = localSiteSettings[k];
+    });
+    if (Object.keys(changed).length) updateSiteSettings(changed);
     showNotice('Бардык аталыштар жана мазмун ийгиликтүү сакталды!');
   };
 

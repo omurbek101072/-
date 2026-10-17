@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { SiteSettings, INITIAL_SITE_SETTINGS } from '../data/mockData';
+import { SiteSettings } from '../data/mockData';
 import {
   Save,
   RotateCcw,
@@ -52,20 +52,31 @@ export const SiteContentEditor: React.FC = () => {
     }));
   };
 
+  // Сервердеги маалымат жаңырса (жана форма өзгөртүлбөсө) — форманы да жаңыртабыз
+  const [baseline, setBaseline] = useState<SiteSettings>(siteSettings);
+  useEffect(() => {
+    const dirty = (Object.keys(formData) as (keyof SiteSettings)[]).some(k => formData[k] !== baseline[k]);
+    if (!dirty) setFormData(siteSettings);
+    setBaseline(siteSettings);
+  }, [siteSettings]);
+
   const handleSaveAll = (e: React.FormEvent) => {
     e.preventDefault();
-    updateSiteSettings(formData);
+    // Өзгөртүлгөн талааларды гана сактайбыз — башка жерде өзгөртүлгөн маалыматтын үстүнө жазбайбыз
+    const changed: Partial<SiteSettings> = {};
+    (Object.keys(formData) as (keyof SiteSettings)[]).forEach(k => {
+      if (formData[k] !== baseline[k]) (changed as any)[k] = formData[k];
+    });
+    if (Object.keys(changed).length) updateSiteSettings(changed);
     setSuccessMessage('Бардык аталыштар жана сайттын маалыматтары ийгиликтүү сакталды!');
     setTimeout(() => setSuccessMessage(null), 4000);
   };
 
+  // Сакталбаган өзгөртүүлөрдү гана жокко чыгарат (базадагы маалыматка тийбейт)
   const handleResetToDefault = () => {
-    if (confirm('Бардык аталыштарды баштапкы абалга келтирүүнү каалайсызбы?')) {
-      setFormData(INITIAL_SITE_SETTINGS);
-      updateSiteSettings(INITIAL_SITE_SETTINGS);
-      setSuccessMessage('Баштапкы аталыштар калыбына келтирилди!');
-      setTimeout(() => setSuccessMessage(null), 3000);
-    }
+    setFormData(siteSettings);
+    setSuccessMessage('Сакталбаган өзгөртүүлөр жокко чыгарылды.');
+    setTimeout(() => setSuccessMessage(null), 3000);
   };
 
   const startEditZone = (zone: any) => {
@@ -100,10 +111,10 @@ export const SiteContentEditor: React.FC = () => {
             type="button"
             onClick={handleResetToDefault}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-600 text-xs font-semibold transition-colors cursor-pointer"
-            title="Баштапкы тексти калыбына келтирүү"
+            title="Сакталбаган өзгөртүүлөрдү жокко чыгаруу"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Баштапкыга келтирүү</span>
+            <span>Өзгөртүүлөрдү жокко чыгаруу</span>
           </button>
 
           <button
@@ -787,7 +798,7 @@ export const SiteContentEditor: React.FC = () => {
             onClick={handleResetToDefault}
             className="px-4 py-2.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-700 text-xs font-semibold cursor-pointer"
           >
-            Баштапкы абалга кайтаруу
+            Өзгөртүүлөрдү жокко чыгаруу
           </button>
 
           <button
