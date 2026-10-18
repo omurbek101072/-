@@ -96,8 +96,36 @@ export interface AccountHistory {
   readings: { date: string; prev: number; new: number; amount: number }[];
 }
 
+export interface AuditEntry {
+  id: number;
+  at: string;
+  actor: string;
+  action: string;
+  account_id: string | null;
+  details: Record<string, unknown>;
+}
+
+export interface AccrualRun {
+  period: string;
+  kind: 'waste' | 'pasture';
+  created_at: string;
+  actor: string;
+  accounts: number;
+  total: number;
+}
+
+export interface StaffMeterResult {
+  prev: number;
+  new: number;
+  consumed: number;
+  amount: number;
+}
+
+export type StaffRole = 'admin' | 'operator';
+
 export interface AdminInfo {
   email: string;
+  role?: StaffRole;
   addedAt: string;
   registered: boolean;
   confirmed: boolean;
@@ -123,7 +151,11 @@ interface AppContextType {
   tariffs: TariffConfig;
   siteSettings: SiteSettings;
   pastureZones: PastureZone[];
+  /** Кызматкер (админ же оператор) кирдиби */
   isAdminLoggedIn: boolean;
+  /** 'admin' — толук укук, 'operator' — абоненттер, касса, көрсөткүч гана */
+  staffRole: StaffRole | null;
+  isOperator: boolean;
   adminEmail: string | null;
   isEditModeActive: boolean;
   isLoading: boolean;
@@ -174,7 +206,12 @@ interface AppContextType {
   authMessage: string | null;
   clearAuthMessage: () => void;
   listAdmins: () => Promise<AdminInfo[]>;
-  addAdmin: (email: string) => Promise<Result>;
+  addAdmin: (email: string, role?: StaffRole) => Promise<Result>;
+  setAdminRole: (email: string, role: StaffRole) => Promise<Result>;
+  staffMeterReading: (accountId: string, reading: number) => Promise<StaffMeterResult>;
+  runMonthlyAccrual: (period: string, waste: boolean, pasture: boolean) => Promise<Result>;
+  listAccruals: () => Promise<AccrualRun[]>;
+  listAudit: (limit?: number) => Promise<AuditEntry[]>;
   removeAdmin: (email: string) => Promise<Result>;
   logoutAdmin: () => void;
   refreshData: (keepNonAdminSession?: boolean) => Promise<void>;
@@ -205,12 +242,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [citizenTickets, setCitizenTickets] = useState<CitizenTicket[]>([]);
 
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
-  const [isEditModeActive, setIsEditModeActive] = useState(false);
+  const [isEditModeActive, setIsEditModeActiveRaw] = useState(false);
+  // Оператор сайттын тексттерин өзгөртө албайт
+  const setIsEditModeActive = useCallback(
+    (active: boolean) => setIsEditModeActiveRaw(active && staffRole === 'admin'),
+    [staffRole]
+  );
   // Админ киргенде сайттын бетиндеги «Өзгөртүү» баскычтары дароо көрүнсүн
   useEffect(() => {
-    setIsEditModeActive(isAdminLoggedIn);
-  }, [isAdminLoggedIn]);
+    setIsEditModeActiveRaw(isAdminLoggedIn && staffRole === 'admin');
+  }, [isAdminLoggedIn, staffRole]);
   const [isLoading, setIsLoading] = useState(true);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
@@ -257,16 +300,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const loadAdmin = useCallback(async () => {
-    const [subs, orders, tickets, txs] = await Promise.all([
+    // Оператордо заказдар/арыздар көрүнбөйт — бирөө ката берсе, калганы жүктөлө берсин
+    const [subs, orders, tickets, txs] = await Promise.allSettled([
       db.select<SubscriberRow>('subscribers', 'select=*&order=id.asc'),
       db.select<{ data: MachineryOrder }>('machinery_orders', 'select=data&order=created_at.desc'),
       db.select<{ data: CitizenTicket }>('citizen_tickets', 'select=data&order=created_at.desc'),
       db.select<{ data: PaymentTransaction }>('transactions', 'select=data&order=created_at.desc&limit=500')
     ]);
-    setSubscribers(subs.map(fromRow));
-    setMachineryOrders(orders.map(o => o.data));
-    setCitizenTickets(tickets.map(t => t.data));
-    setTransactions(txs.map(t => t.data));
+    if (subs.status === 'rejected') throw subs.reason;
+    setSubscribers(subs.value.map(fromRow));
+    setMachineryOrders(orders.status === 'fulfilled' ? orders.value.map(o => o.data) : []);
+    setCitizenTickets(tickets.status === 'fulfilled' ? tickets.value.map(t => t.data) : []);
+    if (txs.status === 'fulfilled') setTransactions(txs.value.map(t => t.data));
   }, []);
 
   const clearAdminData = () => {
@@ -279,13 +324,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const checkAdmin = useCallback(async (): Promise<boolean> => {
     const s = getSession();
     if (!s) return false;
-    const ok = await db.rpc<boolean>('is_admin');
-    if (ok) {
+    let role: StaffRole | null = null;
+    try {
+      role = (await db.rpc<StaffRole | null>('my_role')) || null;
+    } catch {
+      // 008_roles.sql иштетиле элек болсо — мурункудай текшеребиз
+      role = (await db.rpc<boolean>('is_admin')) ? 'admin' : null;
+    }
+    if (role) {
+      setStaffRole(role);
       setIsAdminLoggedIn(true);
       setAdminEmail(s.email);
       await loadAdmin();
     }
-    return !!ok;
+    return !!role;
   }, [loadAdmin]);
 
   const refreshData = useCallback(async (keepNonAdminSession = false) => {
@@ -297,6 +349,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!ok && !keepNonAdminSession) {
           await auth.signOut();
           setIsAdminLoggedIn(false);
+          setStaffRole(null);
         }
       }
       setConnectionError(null);
@@ -663,12 +716,70 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const listAdmins = async (): Promise<AdminInfo[]> => (await db.rpc<AdminInfo[]>('admin_list')) || [];
 
-  const addAdmin = async (email: string): Promise<Result> => {
+  const ROLES_MISSING = "Ролдор даяр эмес: supabase/008_roles.sql файлын Supabase'те иштетиңиз.";
+  const rolesErr = (e: unknown) => {
+    const m = errText(e);
+    return /staff_|admin_set_role|audit_log|accruals|schema cache|Could not find|does not exist/i.test(m) ? ROLES_MISSING : m;
+  };
+
+  const addAdmin = async (email: string, role: StaffRole = 'admin'): Promise<Result> => {
     try {
-      await db.rpc('admin_add', { p_email: email });
+      await db.rpc('admin_add', role === 'admin' ? { p_email: email } : { p_email: email, p_role: role });
       return { ok: true };
     } catch (e) {
-      return { ok: false, error: errText(e) };
+      return { ok: false, error: role === 'admin' ? errText(e) : rolesErr(e) };
+    }
+  };
+
+  const setAdminRole = async (email: string, role: StaffRole): Promise<Result> => {
+    try {
+      await db.rpc('admin_set_role', { p_email: email, p_role: role });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: rolesErr(e) };
+    }
+  };
+
+  const staffMeterReading = async (accountId: string, reading: number): Promise<StaffMeterResult> => {
+    try {
+      const r = await db.rpc<StaffMeterResult>('staff_meter_reading', { p_account: accountId, p_reading: reading });
+      loadAdmin().catch(() => undefined);
+      return { prev: Number(r.prev), new: Number(r.new), consumed: Number(r.consumed), amount: Number(r.amount) };
+    } catch (e) {
+      throw new Error(rolesErr(e));
+    }
+  };
+
+  const runMonthlyAccrual = async (period: string, waste: boolean, pasture: boolean): Promise<Result> => {
+    try {
+      const r = await db.rpc<Record<string, { accounts: number; total: number }>>('staff_monthly_accrual', {
+        p_period: period,
+        p_waste: waste,
+        p_pasture: pasture
+      });
+      await loadAdmin();
+      const parts: string[] = [];
+      if (r?.waste) parts.push(`таштанды — ${r.waste.accounts} абонент, ${Number(r.waste.total).toLocaleString('ru-RU')} сом`);
+      if (r?.pasture) parts.push(`жайыт — ${r.pasture.accounts} абонент, ${Number(r.pasture.total).toLocaleString('ru-RU')} сом`);
+      return { ok: true, info: `Эсептелди: ${parts.join('; ')}.` };
+    } catch (e) {
+      return { ok: false, error: rolesErr(e) };
+    }
+  };
+
+  const listAccruals = async (): Promise<AccrualRun[]> => {
+    try {
+      return await db.select<AccrualRun>('accruals', 'select=*&order=period.desc,kind.asc&limit=48');
+    } catch {
+      return [];
+    }
+  };
+
+  const listAudit = async (limit = 300): Promise<AuditEntry[]> => {
+    try {
+      return await db.select<AuditEntry>('audit_log', `select=*&order=id.desc&limit=${limit}`);
+    } catch (e) {
+      throw new Error(rolesErr(e));
     }
   };
 
@@ -684,8 +795,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logoutAdmin = () => {
     auth.signOut();
     setIsAdminLoggedIn(false);
+    setStaffRole(null);
     setAdminEmail(null);
-    setIsEditModeActive(false);
+    setIsEditModeActiveRaw(false);
     clearAdminData();
     loadPublic().catch(() => undefined);
   };
@@ -708,6 +820,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         siteSettings,
         pastureZones,
         isAdminLoggedIn,
+        staffRole,
+        isOperator: staffRole === 'operator',
         adminEmail,
         isEditModeActive,
         isLoading,
@@ -754,6 +868,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearAuthMessage: () => setAuthMessage(null),
         listAdmins,
         addAdmin,
+        setAdminRole,
+        staffMeterReading,
+        runMonthlyAccrual,
+        listAccruals,
+        listAudit,
         removeAdmin,
         logoutAdmin,
         refreshData,

@@ -19,12 +19,12 @@ export const EditableText: React.FC<EditableTextProps> = ({
   label,
   as: Component = 'span'
 }) => {
-  const { siteSettings, updateSiteSettings, isAdminLoggedIn, isEditModeActive } = useApp();
+  const { siteSettings, updateSiteSettings, isAdminLoggedIn, isOperator, isEditModeActive } = useApp();
   const [isEditing, setIsEditing] = useState(false);
   const [currentVal, setCurrentVal] = useState<string>(String(siteSettings[settingKey] || ''));
 
   // If not logged in, render as ordinary clean text
-  if (!isAdminLoggedIn) {
+  if (!isAdminLoggedIn || isOperator) {
     return <Component className={className}>{String(siteSettings[settingKey] || '')}</Component>;
   }
 

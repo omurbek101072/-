@@ -35,13 +35,16 @@ import {
   LogOut,
   Sliders,
   DollarSign,
-  Droplets
+  Droplets,
+  Calculator,
+  History
 } from 'lucide-react';
 import { generateId, nowTimestamp } from '../utils/ids';
 import { ReceiptModal } from './ReceiptModal';
 import { SiteContentEditor } from './SiteContentEditor';
 import { AdminManager } from './AdminManager';
 import { ContentManager, MachineryEditor } from './ContentManager';
+import { AccrualPanel, AuditLogPanel, MeterEntryButton } from './StaffTools';
 
 interface AdminPanelProps {
   onClose: () => void;
@@ -68,12 +71,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     addSubscriber,
     updateMachineryItem,
     updateTariffs,
-    resetToDefaults
+    resetToDefaults,
+    isOperator
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<
-    'overview' | 'orders' | 'tickets' | 'cashier' | 'subscribers' | 'settings' | 'site_content' | 'reports' | 'admins' | 'content'
-  >('overview');
+  type Tab =
+    | 'overview' | 'orders' | 'tickets' | 'cashier' | 'subscribers' | 'settings' | 'site_content' | 'reports' | 'admins' | 'content'
+    | 'accrual' | 'audit';
+  // Оператор: абоненттер, касса, айлык эсептөө гана
+  const OPERATOR_TABS: Tab[] = ['subscribers', 'cashier', 'accrual'];
+  const can = (t: Tab) => !isOperator || OPERATOR_TABS.includes(t);
+  const [activeTab, setActiveTab] = useState<Tab>(isOperator ? 'subscribers' : 'overview');
+  const tabShown = (t: Tab) => activeTab === t && can(t);
 
   const [localSiteSettings, setLocalSiteSettings] = useState(siteSettings);
   const [editingPastureZone, setEditingPastureZone] = useState<any | null>(null);
@@ -293,7 +302,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-extrabold tracking-tight text-white">
-                «Тазалык» МИ — Башкаруу панели (Админ)
+                «Тазалык» МИ — Башкаруу панели ({isOperator ? 'Оператор' : 'Админ'})
               </span>
               <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800">
                 Айыл өкмөтү
@@ -338,6 +347,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
               Башкаруу менюсу
             </div>
 
+{can('overview') && (
             <button
               onClick={() => setActiveTab('overview')}
               className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
@@ -349,7 +359,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
               <LayoutDashboard className="w-4 h-4 text-emerald-700" />
               <span>Көзөмөл панели</span>
             </button>
+            )}
 
+{can('content') && (
             <button
               onClick={() => setActiveTab('content')}
               className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
@@ -361,7 +373,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
               <FileText className="w-4 h-4 text-sky-700" />
               <span>Жаңылыктар, отчеттор, сүрөттөр</span>
             </button>
+            )}
 
+{can('orders') && (
             <button
               onClick={() => setActiveTab('orders')}
               className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
@@ -380,7 +394,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                 </span>
               )}
             </button>
+            )}
 
+{can('tickets') && (
             <button
               onClick={() => setActiveTab('tickets')}
               className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
@@ -399,7 +415,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                 </span>
               )}
             </button>
+            )}
 
+{can('cashier') && (
             <button
               onClick={() => setActiveTab('cashier')}
               className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
@@ -411,7 +429,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
               <DollarSign className="w-4 h-4 text-emerald-700" />
               <span>Төлөм кабыл алуу (Касса)</span>
             </button>
+            )}
 
+{can('subscribers') && (
             <button
               onClick={() => setActiveTab('subscribers')}
               className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
@@ -423,7 +443,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
               <Users className="w-4 h-4 text-cyan-700" />
               <span>Абоненттер базасы</span>
             </button>
+            )}
 
+{can('site_content') && (
             <button
               onClick={() => setActiveTab('site_content')}
               className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
@@ -435,8 +457,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
               <Edit2 className="w-4 h-4 text-amber-600" />
               <span>Аталыштар & Мазмун</span>
             </button>
+            )}
 
 
+{can('admins') && (
             <button
               onClick={() => setActiveTab('admins')}
               className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
@@ -448,7 +472,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
               <ShieldAlert className="w-4 h-4 text-emerald-700" />
               <span>Админдер</span>
             </button>
+            )}
 
+{can('settings') && (
             <button
               onClick={() => setActiveTab('settings')}
               className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
@@ -460,7 +486,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
               <Sliders className="w-4 h-4 text-purple-700" />
               <span>Тарифтер & Техника</span>
             </button>
+            )}
 
+{can('reports') && (
             <button
               onClick={() => setActiveTab('reports')}
               className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
@@ -472,6 +500,34 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
               <FileSpreadsheet className="w-4 h-4 text-stone-700" />
               <span>Финансылык отчеттор</span>
             </button>
+            )}
+            {can('accrual') && (
+            <button
+              onClick={() => setActiveTab('accrual')}
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+                activeTab === 'accrual'
+                  ? 'bg-emerald-50 text-emerald-900 font-bold'
+                  : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+              }`}
+            >
+              <Calculator className="w-4 h-4 text-emerald-700" />
+              <span>Айлык эсептөө</span>
+            </button>
+            )}
+            {!isOperator && (
+            
+            <button
+              onClick={() => setActiveTab('audit')}
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+                activeTab === 'audit'
+                  ? 'bg-emerald-50 text-emerald-900 font-bold'
+                  : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+              }`}
+            >
+              <History className="w-4 h-4 text-stone-700" />
+              <span>Өзгөртүүлөр журналы</span>
+            </button>
+            )}
           </div>
 
           <div className="hidden md:block pt-4 border-t border-stone-200 text-[11px] text-stone-400 space-y-2">
@@ -492,7 +548,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
         {/* Dynamic Workspace Container */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           {/* ================= TAB 1: OVERVIEW ================= */}
-          {activeTab === 'overview' && (
+          {tabShown('overview') && (
             <div className="space-y-6 max-w-6xl">
               <div>
                 <h2 className="text-xl font-extrabold text-stone-900">
@@ -673,7 +729,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
           )}
 
           {/* ================= TAB 2: ORDERS MANAGEMENT ================= */}
-          {activeTab === 'orders' && (
+          {tabShown('orders') && (
             <div className="space-y-6 max-w-6xl">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -873,7 +929,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
           )}
 
           {/* ================= TAB 3: CITIZEN TICKETS ================= */}
-          {activeTab === 'tickets' && (
+          {tabShown('tickets') && (
             <div className="space-y-6 max-w-6xl">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -1035,7 +1091,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
           )}
 
           {/* ================= TAB 4: CASHIER / ACCEPT PAYMENT ================= */}
-          {activeTab === 'cashier' && (
+          {tabShown('cashier') && (
             <div className="space-y-6 max-w-4xl">
               <div>
                 <h2 className="text-xl font-extrabold text-stone-900">
@@ -1171,7 +1227,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
           )}
 
           {/* ================= TAB 5: SUBSCRIBERS ================= */}
-          {activeTab === 'subscribers' && (
+          {tabShown('subscribers') && (
             <div className="space-y-6 max-w-6xl">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -1257,13 +1313,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                             {sub.registeredLivestock.cattle} уй, {sub.registeredLivestock.horses} жылкы, {sub.registeredLivestock.sheepGoats} кой
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            <button
-                              onClick={() => setEditingSub(sub)}
-                              className="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold rounded-lg text-[11px] transition-colors cursor-pointer flex items-center gap-1 ml-auto"
-                            >
-                              <Edit2 className="w-3 h-3 text-stone-600" />
-                              <span>Өзгөртүү</span>
-                            </button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <MeterEntryButton sub={sub} onDone={showNotice} />
+                              <button
+                                onClick={() => setEditingSub(sub)}
+                                className="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold rounded-lg text-[11px] transition-colors cursor-pointer flex items-center gap-1"
+                              >
+                                <Edit2 className="w-3 h-3 text-stone-600" />
+                                <span>Өзгөртүү</span>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1521,20 +1580,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
           )}
 
           {/* ================= TAB: SITE CONTENT & TITLES ================= */}
-          {activeTab === 'content' && <ContentManager />}
+          {tabShown('content') && <ContentManager />}
 
-          {activeTab === 'admins' && (
+          {tabShown('accrual') && <AccrualPanel />}
+
+          {!isOperator && activeTab === 'audit' && <AuditLogPanel />}
+
+          {tabShown('admins') && (
             <div className="max-w-2xl">
               <AdminManager />
             </div>
           )}
 
-          {activeTab === 'site_content' && (
+          {tabShown('site_content') && (
             <SiteContentEditor />
           )}
 
           {/* ================= TAB 6: SETTINGS & TARIFFS ================= */}
-          {activeTab === 'settings' && (
+          {tabShown('settings') && (
             <div className="space-y-6 max-w-5xl">
               <div>
                 <h2 className="text-xl font-extrabold text-stone-900">
@@ -1756,7 +1819,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
           )}
 
           {/* ================= TAB 7: REPORTS & DEBTORS ================= */}
-          {activeTab === 'reports' && (
+          {tabShown('reports') && (
             <div className="space-y-6 max-w-6xl">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>

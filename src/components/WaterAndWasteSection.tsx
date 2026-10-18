@@ -33,7 +33,8 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
   onDirectPayment,
   onOpenCitizenRequest
 }) => {
-  const { tariffs, updateTariffs, siteSettings, isAdminLoggedIn, lookupSubscriber, submitMeterReading, createTicket, content } = useApp();
+  const { tariffs, updateTariffs, siteSettings, isAdminLoggedIn: isStaff, isOperator, lookupSubscriber, submitMeterReading, createTicket, content } = useApp();
+  const canEditTariffs = isStaff && !isOperator;
   const [activeTab, setActiveTab] = useState<'water' | 'waste'>('water');
 
   // Calculator Sub-mode:
@@ -676,7 +677,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                     </div>
 
                     {/* Quick Admin Edit Trigger */}
-                    {isAdminLoggedIn && (
+                    {canEditTariffs && (
                       <button
                         type="button"
                         onClick={() => {
@@ -698,7 +699,7 @@ export const WaterAndWasteSection: React.FC<WaterAndWasteSectionProps> = ({
                   </div>
 
                   {/* ADMIN INLINE EDITING FORM */}
-                  {isAdminLoggedIn && isEditingTariffs ? (
+                  {canEditTariffs && isEditingTariffs ? (
                     <form onSubmit={handleSaveQuickTariffs} className="p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-3 text-xs">
                       <div className="font-bold text-amber-950 flex items-center gap-1.5 text-xs">
                         <Sparkles className="w-3.5 h-3.5 text-amber-700" />

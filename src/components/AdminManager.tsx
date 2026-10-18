@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { useApp, AdminInfo } from '../context/AppContext';
+import { useApp, AdminInfo, StaffRole } from '../context/AppContext';
 import { Users, Plus, Trash2, RefreshCw, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 
 // Админдерди сайттын ичинен кошуу жана алып салуу
 export const AdminManager: React.FC = () => {
-  const { listAdmins, addAdmin, removeAdmin, adminEmail } = useApp();
+  const { listAdmins, addAdmin, removeAdmin, setAdminRole, adminEmail } = useApp();
   const [admins, setAdmins] = useState<AdminInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [newEmail, setNewEmail] = useState('');
+  const [newRole, setNewRole] = useState<StaffRole>('operator');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
@@ -32,12 +33,12 @@ export const AdminManager: React.FC = () => {
     const email = newEmail.trim();
     if (!email || busy) return;
     setBusy(true);
-    const r = await addAdmin(email);
+    const r = await addAdmin(email, newRole);
     setBusy(false);
     if (r.ok) {
       setMessage({
         ok: true,
-        text: `${email} админ катары кошулду. Ал сайттагы «Кызматтык кирүү → Катталуу» аркылуу ушул email менен катталып, кире алат.`
+        text: `${email} ${newRole === 'operator' ? 'оператор' : 'админ'} катары кошулду. Ал сайттагы «Кызматтык кирүү → Катталуу» аркылуу ушул email менен катталып, кире алат.`
       });
       setNewEmail('');
       load();
@@ -51,8 +52,16 @@ export const AdminManager: React.FC = () => {
     const r = await removeAdmin(email);
     setBusy(false);
     setConfirmRemove(null);
-    setMessage(r.ok ? { ok: true, text: `${email} админдиктен алынды.` } : { ok: false, text: r.error || 'Алып салуу мүмкүн болгон жок.' });
+    setMessage(r.ok ? { ok: true, text: `${email} тизмеден алынды.` } : { ok: false, text: r.error || 'Алып салуу мүмкүн болгон жок.' });
     if (r.ok) load();
+  };
+
+  const handleRole = async (email: string, role: StaffRole) => {
+    setBusy(true);
+    const r = await setAdminRole(email, role);
+    setBusy(false);
+    setMessage(r.ok ? { ok: true, text: `${email}: ролу «${role === 'operator' ? 'Оператор' : 'Админ'}» болду.` } : { ok: false, text: r.error || 'Өзгөртүү мүмкүн болгон жок.' });
+    load();
   };
 
   const isMe = (email: string) => email.toLowerCase() === (adminEmail || '').toLowerCase();
@@ -63,10 +72,12 @@ export const AdminManager: React.FC = () => {
         <div>
           <h3 className="text-sm font-bold text-stone-900 flex items-center gap-2">
             <Users className="w-4 h-4 text-emerald-700" />
-            <span>Админдер</span>
+            <span>Админдер жана операторлор</span>
           </h3>
           <p className="text-[11px] text-stone-500 mt-0.5">
             Бул тизмедеги email менен катталган адамдар башкаруу панелине кире алат.
+            <b> Админ</b> — бардыгын өзгөртөт. <b>Оператор</b> — абоненттерди, водомер көрсөткүчүн, кассадагы төлөмдү
+            киргизет жана айлык эсептөө жүргүзөт; сайттын тексттерине, тарифтерге жана админдерге тийе албайт.
           </p>
         </div>
         <button
@@ -88,6 +99,13 @@ export const AdminManager: React.FC = () => {
               <div className="font-mono font-semibold text-stone-900 break-all">
                 {a.email}
                 {isMe(a.email) && <span className="ml-2 font-sans text-[10px] text-emerald-700 font-bold">(сиз)</span>}
+                <span
+                  className={`ml-2 font-sans text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                    a.role === 'operator' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'
+                  }`}
+                >
+                  {a.role === 'operator' ? 'Оператор' : 'Админ'}
+                </span>
               </div>
               <div className="text-[10px] text-stone-500 mt-0.5 flex items-center gap-1">
                 {a.confirmed ? (
@@ -109,8 +127,19 @@ export const AdminManager: React.FC = () => {
               </div>
             </div>
 
-            {!isMe(a.email) &&
-              (confirmRemove === a.email ? (
+            {!isMe(a.email) && (
+              <div className="flex items-center gap-1.5">
+                <select
+                  aria-label={`${a.email} ролу`}
+                  value={a.role || 'admin'}
+                  disabled={busy}
+                  onChange={e => handleRole(a.email, e.target.value as StaffRole)}
+                  className="px-2 py-1 border border-stone-200 rounded-md text-[11px] bg-white"
+                >
+                  <option value="admin">Админ</option>
+                  <option value="operator">Оператор</option>
+                </select>
+              {(confirmRemove === a.email ? (
                 <div className="flex items-center gap-1.5">
                   <span className="text-[11px] text-rose-700 font-semibold">Алып салуу?</span>
                   <button
@@ -139,6 +168,8 @@ export const AdminManager: React.FC = () => {
                   <span>Алып салуу</span>
                 </button>
               ))}
+              </div>
+            )}
           </li>
         ))}
         {!loading && admins.length === 0 && <li className="py-3 text-stone-400">Тизме бош</li>}
@@ -146,9 +177,18 @@ export const AdminManager: React.FC = () => {
 
       <form onSubmit={handleAdd} className="space-y-2 pt-2 border-t border-stone-100">
         <label htmlFor="new-admin-email" className="block text-stone-700 font-bold">
-          Жаңы админ кошуу:
+          Жаңы кызматкер кошуу:
         </label>
         <div className="flex flex-wrap gap-2">
+          <select
+            aria-label="Жаңы кызматкердин ролу"
+            value={newRole}
+            onChange={e => setNewRole(e.target.value as StaffRole)}
+            className="px-2 py-2 bg-stone-50 border border-stone-300 rounded-lg"
+          >
+            <option value="operator">Оператор</option>
+            <option value="admin">Админ</option>
+          </select>
           <input
             id="new-admin-email"
             type="email"

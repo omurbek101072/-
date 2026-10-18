@@ -7,7 +7,7 @@ interface AdminTopBarProps {
 }
 
 export const AdminTopBar: React.FC<AdminTopBarProps> = ({ onOpenAdminPanel }) => {
-  const { isAdminLoggedIn, logoutAdmin, isEditModeActive, setIsEditModeActive, adminEmail } = useApp();
+  const { isAdminLoggedIn, isOperator, logoutAdmin, isEditModeActive, setIsEditModeActive, adminEmail } = useApp();
 
   if (!isAdminLoggedIn) return null;
 
@@ -21,7 +21,7 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({ onOpenAdminPanel }) =>
           </span>
           <div className="flex items-center gap-1.5 font-bold text-amber-300">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Администратор сессиясы активдүү</span>
+            <span>{isOperator ? 'Оператор сессиясы активдүү' : 'Администратор сессиясы активдүү'}</span>
           </div>
           <span className="text-stone-500 hidden sm:inline">|</span>
           <span className="text-stone-400 text-[11px] hidden md:inline">
@@ -30,7 +30,8 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({ onOpenAdminPanel }) =>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Toggle In-Place Title Editing */}
+          {/* Toggle In-Place Title Editing (админ гана) */}
+          {!isOperator && (
           <button
             type="button"
             onClick={() => setIsEditModeActive(!isEditModeActive)}
@@ -44,6 +45,7 @@ export const AdminTopBar: React.FC<AdminTopBarProps> = ({ onOpenAdminPanel }) =>
             <Edit3 className="w-3.5 h-3.5 text-amber-500" />
             <span>Сайтты түз өзгөртүү: {isEditModeActive ? 'КҮЙҮК' : 'ӨЧҮК'}</span>
           </button>
+          )}
 
           {/* Open Full Admin Panel */}
           <button
