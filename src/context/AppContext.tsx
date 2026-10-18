@@ -15,6 +15,7 @@ import {
 } from '../data/mockData';
 import { db, auth, getSession, ApiError, consumeAuthRedirect } from '../lib/supabase';
 import { SiteContent, DEFAULT_CONTENT, mergeContent } from '../data/content';
+import { rememberRequest } from '../utils/myDevice';
 
 // ---------- Базадагы абонент ↔ сайттагы абонент ----------
 interface SubscriberRow {
@@ -81,6 +82,20 @@ export interface Review {
   created_at: string;
 }
 
+export interface OrderStatus {
+  id: string;
+  machineName: string;
+  status: string;
+  orderDate: string;
+  totalEstimate: number;
+  paymentStatus: string;
+}
+
+export interface AccountHistory {
+  payments: Pick<PaymentTransaction, 'id' | 'receiptNumber' | 'timestamp' | 'serviceType' | 'serviceName' | 'amount' | 'paymentMethod' | 'status' | 'accountId'>[];
+  readings: { date: string; prev: number; new: number; amount: number }[];
+}
+
 export interface AdminInfo {
   email: string;
   addedAt: string;
@@ -121,6 +136,8 @@ interface AppContextType {
   // Эл үчүн (сервердеги функциялар аркылуу)
   createTicket: (input: TicketInput) => Promise<string>;
   getTicketStatus: (id: string) => Promise<CitizenTicket | null>;
+  getOrderStatus: (id: string) => Promise<OrderStatus | null>;
+  getAccountHistory: (id: string) => Promise<AccountHistory | null>;
   createMachineryOrder: (input: OrderInput) => Promise<string>;
   lookupSubscriber: (id: string) => Promise<SubscriberAccount | null>;
   submitMeterReading: (accountId: string, reading: number, phone: string) => Promise<MeterResult>;
@@ -324,6 +341,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       p_description: input.description,
       p_photo: input.photo ?? null
     });
+    rememberRequest(id, 'ticket');
     if (isAdminLoggedIn) loadAdmin().catch(() => undefined);
     return id;
   };
@@ -335,8 +353,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const createMachineryOrder = async (input: OrderInput): Promise<string> => {
     const id = await db.rpc<string>('create_machinery_order', { p_order: input });
+    rememberRequest(id, 'order');
     if (isAdminLoggedIn) loadAdmin().catch(() => undefined);
     return id;
+  };
+
+  const getOrderStatus = async (id: string): Promise<OrderStatus | null> => {
+    try {
+      return (await db.rpc<OrderStatus | null>('get_order_status', { p_id: id })) || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const getAccountHistory = async (id: string): Promise<AccountHistory | null> => {
+    try {
+      const r = await db.rpc<AccountHistory | null>('account_history', { p_id: id });
+      if (!r) return null;
+      return {
+        payments: (r.payments || []).map(p => ({ ...p, amount: Number(p.amount) })),
+        readings: (r.readings || []).map(x => ({ date: x.date, prev: Number(x.prev), new: Number(x.new), amount: Number(x.amount) }))
+      };
+    } catch {
+      return null; // 007_cabinet.sql иштетиле элек болсо
+    }
   };
 
   const lookupSubscriber = async (id: string): Promise<SubscriberAccount | null> => {
@@ -677,6 +717,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsEditModeActive,
         createTicket,
         getTicketStatus,
+        getOrderStatus,
+        getAccountHistory,
         createMachineryOrder,
         lookupSubscriber,
         submitMeterReading,

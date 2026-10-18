@@ -16,6 +16,7 @@ import { Footer } from './components/Footer';
 import { CitizenRequestModal } from './components/CitizenRequestModal';
 import { AdminPanel } from './components/AdminPanel';
 import { AboutSection } from './components/AboutSection';
+import { CabinetSection } from './components/CabinetSection';
 import { FloatingContact } from './components/FloatingContact';
 import { AdminLoginModal, PasswordRecoveryModal } from './components/AdminLoginModal';
 import { AdminTopBar } from './components/AdminTopBar';
@@ -202,6 +203,15 @@ function MainAppContent() {
         )}
 
         {activeTab === 'about' && <AboutSection />}
+
+        {activeTab === 'cabinet' && (
+          <CabinetSection
+            onPay={(serviceType, amount, details, accountId) =>
+              handleDirectPaymentFromSection(serviceType, amount, details, undefined, accountId)
+            }
+            onOpenCitizenRequest={() => setIsCitizenModalOpen(true)}
+          />
+        )}
       </main>
 
       <FloatingContact />

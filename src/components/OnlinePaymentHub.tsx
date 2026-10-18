@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { T } from './AdminInline';
+import { getMyAccounts, rememberAccount } from '../utils/myDevice';
 import { SubscriberAccount, PaymentTransaction } from '../types';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
@@ -348,6 +349,7 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
                     >
                       <T>Башка эсеп тандоо</T>
                     </button>
+                    <RememberAccountButton id={selectedSubscriber.id} />
                   </div>
                   <div className="text-right">
                     <span className="text-[11px] text-stone-400 uppercase block font-mono"><T>Лицевой эсеп</T></span>
@@ -773,5 +775,23 @@ export const OnlinePaymentHub: React.FC<OnlinePaymentHubProps> = ({
         />
       )}
     </section>
+  );
+};
+
+// «Бул эсепти эстеп кал» — «Менин эсебим» бетине кошот
+const RememberAccountButton: React.FC<{ id: string }> = ({ id }) => {
+  const [saved, setSaved] = React.useState(() => getMyAccounts().includes(id));
+  if (saved) return <span className="block mt-1 text-[11px] font-semibold text-emerald-700">✓ «Менин эсебим» бетинде сакталды</span>;
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        rememberAccount(id);
+        setSaved(true);
+      }}
+      className="block mt-1 text-[11px] font-semibold text-emerald-700 hover:underline cursor-pointer"
+    >
+      + Бул эсепти «Менин эсебим» бетине сактоо
+    </button>
   );
 };

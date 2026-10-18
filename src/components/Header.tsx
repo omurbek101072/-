@@ -1,6 +1,6 @@
 import { T } from './AdminInline';
 import React from 'react';
-import { Phone, CreditCard, AlertTriangle, Menu, X, ShieldCheck, Settings } from 'lucide-react';
+import { Phone, CreditCard, AlertTriangle, Menu, X, ShieldCheck, Settings, UserRound } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { EditableText } from './EditableText';
 import { PhoneLink } from './PhoneLink';
@@ -131,11 +131,13 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Zone 3: 1 primary action */}
         <div className="hidden sm:flex items-center gap-2.5 shrink-0">
           <button
-            onClick={onOpenQuickPayment}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg shadow-sm transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            onClick={() => handleNavClick('cabinet')}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg shadow-sm transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              activeTab === 'cabinet' ? 'bg-emerald-900 text-white' : 'text-white bg-emerald-700 hover:bg-emerald-800'
+            }`}
           >
-            <CreditCard className="w-3.5 h-3.5" />
-            <span>Онлайн төлөм</span>
+            <UserRound className="w-3.5 h-3.5" />
+            <span><T>Менин эсебим</T></span>
           </button>
         </div>
 
@@ -166,6 +168,13 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           ))}
           <div className="pt-2 border-t border-stone-100 flex flex-col gap-2">
+            <button
+              onClick={() => handleNavClick('cabinet')}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-emerald-800 rounded-lg"
+            >
+              <UserRound className="w-4 h-4" />
+              <span><T>Менин эсебим</T></span>
+            </button>
             <button
               onClick={() => {
                 onOpenQuickPayment();
