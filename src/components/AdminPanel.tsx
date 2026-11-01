@@ -45,6 +45,7 @@ import { SiteContentEditor } from './SiteContentEditor';
 import { AdminManager } from './AdminManager';
 import { ContentManager, MachineryEditor } from './ContentManager';
 import { AccrualPanel, AuditLogPanel, MeterEntryButton } from './StaffTools';
+import { DebtorsPanel, ExcelReportsPanel } from './CrmTools';
 
 interface AdminPanelProps {
   onClose: () => void;
@@ -72,15 +73,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
     updateMachineryItem,
     updateTariffs,
     resetToDefaults,
-    isOperator
+    isOperator,
+    hasService,
+    staffServices
   } = useApp();
 
   type Tab =
     | 'overview' | 'orders' | 'tickets' | 'cashier' | 'subscribers' | 'settings' | 'site_content' | 'reports' | 'admins' | 'content'
-    | 'accrual' | 'audit';
-  // Оператор: абоненттер, касса, айлык эсептөө гана
-  const OPERATOR_TABS: Tab[] = ['subscribers', 'cashier', 'accrual'];
-  const can = (t: Tab) => !isOperator || OPERATOR_TABS.includes(t);
+    | 'accrual' | 'audit' | 'debtors' | 'excel';
+  // Оператор: абоненттер, касса, карызкорлор, айлык эсептөө, Excel отчеттор
+  const OPERATOR_TABS: Tab[] = ['subscribers', 'cashier', 'debtors', 'accrual', 'excel'];
+  const canAccrue = hasService('waste') || hasService('pasture');
+  const can = (t: Tab) => (!isOperator || OPERATOR_TABS.includes(t)) && (t !== 'accrual' || canAccrue);
   const [activeTab, setActiveTab] = useState<Tab>(isOperator ? 'subscribers' : 'overview');
   const tabShown = (t: Tab) => activeTab === t && can(t);
 
@@ -101,6 +105,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
   const [cashierPayerName, setCashierPayerName] = useState('');
   const [cashierPhone, setCashierPhone] = useState('');
   const [cashierService, setCashierService] = useState<'water' | 'waste' | 'pasture' | 'machinery'>('water');
+  // Оператор өзүнүн кызматтарынын төлөмүн гана кабыл алат
+  useEffect(() => {
+    if (!staffServices.includes(cashierService)) setCashierService(staffServices[0] || 'water');
+  }, [staffServices, cashierService]);
   const [cashierAmount, setCashierAmount] = useState<number>(240);
   const [cashierMethod, setCashierMethod] = useState<'Накталай (Касса)' | 'MBank' | 'Optima24' | 'Банк картасы'>('Накталай (Касса)');
   const [cashierDetails, setCashierDetails] = useState('Кассадан накталай кабыл алынды');
@@ -442,6 +450,32 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
             >
               <Users className="w-4 h-4 text-cyan-700" />
               <span>Абоненттер базасы</span>
+            </button>
+            )}
+            {can('debtors') && (
+            <button
+              onClick={() => setActiveTab('debtors')}
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+                activeTab === 'debtors'
+                  ? 'bg-emerald-50 text-emerald-900 font-bold'
+                  : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+              }`}
+            >
+              <AlertTriangle className="w-4 h-4 text-rose-600" />
+              <span>Карызкорлор</span>
+            </button>
+            )}
+            {can('excel') && (
+            <button
+              onClick={() => setActiveTab('excel')}
+              className={`shrink-0 whitespace-nowrap md:whitespace-normal md:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors cursor-pointer ${
+                activeTab === 'excel'
+                  ? 'bg-emerald-50 text-emerald-900 font-bold'
+                  : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+              }`}
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+              <span>Excel отчеттор</span>
             </button>
             )}
 
@@ -1167,10 +1201,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                         onChange={(e) => setCashierService(e.target.value as any)}
                         className="w-full px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-xs font-medium"
                       >
-                        <option value="water">Таза суу акысы</option>
-                        <option value="waste">Таштанды чыгаруу</option>
-                        <option value="pasture">Жайыт пайдалануу акысы</option>
-                        <option value="machinery">Атайын техника ижарасы</option>
+                        {hasService('water') && <option value="water">Таза суу акысы</option>}
+                        {hasService('waste') && <option value="waste">Таштанды чыгаруу</option>}
+                        {hasService('pasture') && <option value="pasture">Жайыт пайдалануу акысы</option>}
+                        {hasService('machinery') && <option value="machinery">Атайын техника ижарасы</option>}
                       </select>
                     </div>
 
@@ -1270,9 +1304,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                         <th className="py-3 px-4">Эсеп №</th>
                         <th className="py-3 px-4">Абоненттин аты-жөнү</th>
                         <th className="py-3 px-4">Дареги & Телефон</th>
-                        <th className="py-3 px-4">Суу балансы (м³)</th>
-                        <th className="py-3 px-4">Таштанды (адам)</th>
-                        <th className="py-3 px-4">Катталган мал</th>
+                        {hasService('water') && <th className="py-3 px-4">Суу балансы (м³)</th>}
+                        {hasService('waste') && <th className="py-3 px-4">Таштанды (адам)</th>}
+                        {hasService('pasture') && <th className="py-3 px-4">Жайыт (мал)</th>}
                         <th className="py-3 px-4 text-right">Аракет</th>
                       </tr>
                     </thead>
@@ -1289,7 +1323,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                             <div>{sub.address}</div>
                             <div className="text-stone-400 font-mono text-[11px]">{sub.phone}</div>
                           </td>
-                          <td className="py-3.5 px-4">
+                          {hasService('water') && (<td className="py-3.5 px-4">
                             <span className={`font-mono font-bold ${
                               sub.waterBalance < 0 ? 'text-rose-600' : 'text-emerald-700'
                             }`}>
@@ -1298,8 +1332,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                             <span className="block text-[10px] text-stone-400 font-mono">
                               Водомер: {sub.waterLastMeterReading} м³
                             </span>
-                          </td>
-                          <td className="py-3.5 px-4">
+                          </td>)}
+                          {hasService('waste') && (<td className="py-3.5 px-4">
                             <span className={`font-mono font-bold ${
                               sub.wasteBalance < 0 ? 'text-rose-600' : 'text-emerald-700'
                             }`}>
@@ -1308,13 +1342,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                             <span className="block text-[10px] text-stone-400">
                               {sub.wasteFamilyMembers} адам
                             </span>
-                          </td>
-                          <td className="py-3.5 px-4 text-[11px]">
+                          </td>)}
+                          {hasService('pasture') && (<td className="py-3.5 px-4 text-[11px]">
+                            <span className={`block font-mono font-bold ${
+                              sub.pastureBalance < 0 ? 'text-rose-600' : 'text-emerald-700'
+                            }`}>
+                              {sub.pastureBalance < 0 ? `${Math.abs(sub.pastureBalance)} с. карыз` : `${sub.pastureBalance} с.`}
+                            </span>
                             {sub.registeredLivestock.cattle} уй, {sub.registeredLivestock.horses} жылкы, {sub.registeredLivestock.sheepGoats} кой
-                          </td>
+                          </td>)}
                           <td className="py-3.5 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <MeterEntryButton sub={sub} onDone={showNotice} />
+                              {hasService('water') && <MeterEntryButton sub={sub} onDone={showNotice} />}
                               <button
                                 onClick={() => setEditingSub(sub)}
                                 className="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold rounded-lg text-[11px] transition-colors cursor-pointer flex items-center gap-1"
@@ -1374,7 +1413,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 p-3 bg-stone-50 rounded-xl border border-stone-200">
+                      {hasService('water') && (<div className="grid grid-cols-2 gap-3 p-3 bg-stone-50 rounded-xl border border-stone-200">
                         <div>
                           <label className="block text-stone-700 font-semibold mb-1">Суу балансы (сом):</label>
                           <input
@@ -1394,9 +1433,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                             className="w-full px-3 py-1.5 bg-white border border-stone-300 rounded-lg font-mono text-xs"
                           />
                         </div>
-                      </div>
+                      </div>)}
 
-                      <div className="grid grid-cols-2 gap-3 p-3 bg-stone-50 rounded-xl border border-stone-200">
+                      {hasService('waste') && (<div className="grid grid-cols-2 gap-3 p-3 bg-stone-50 rounded-xl border border-stone-200">
                         <div>
                           <label className="block text-stone-700 font-semibold mb-1">Үй-бүлө мүчөлөрүнүн саны:</label>
                           <input
@@ -1415,9 +1454,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                             className="w-full px-3 py-1.5 bg-white border border-stone-300 rounded-lg font-mono text-xs"
                           />
                         </div>
-                      </div>
+                      </div>)}
 
-                      <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 space-y-2">
+                      {hasService('pasture') && (<div className="p-3 bg-stone-50 rounded-xl border border-stone-200 space-y-2">
                         <label className="block text-stone-700 font-semibold">Катталган малдын саны:</label>
                         <div className="grid grid-cols-3 gap-2">
                           <div>
@@ -1456,8 +1495,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
                               className="w-full px-2 py-1 bg-white border border-stone-300 rounded text-xs"
                             />
                           </div>
+                          <div>
+                            <span className="text-[10px] text-stone-500">Топоз:</span>
+                            <input
+                              type="number"
+                              value={editingSub.registeredLivestock.yaks || 0}
+                              onChange={(e) => setEditingSub({
+                                ...editingSub,
+                                registeredLivestock: { ...editingSub.registeredLivestock, yaks: Number(e.target.value) }
+                              })}
+                              className="w-full px-2 py-1 bg-white border border-stone-300 rounded text-xs"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-[10px] text-stone-500">Жайыт балансы (сом, минус — карыз):</span>
+                            <input
+                              type="number"
+                              value={editingSub.pastureBalance}
+                              onChange={(e) => setEditingSub({ ...editingSub, pastureBalance: Number(e.target.value) })}
+                              className="w-full px-2 py-1 bg-white border border-stone-300 rounded text-xs font-mono"
+                            />
+                          </div>
                         </div>
-                      </div>
+                      </div>)}
 
                       <div className="flex justify-end gap-2 pt-2">
                         <button
@@ -1583,6 +1643,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onClose }) => {
           {tabShown('content') && <ContentManager />}
 
           {tabShown('accrual') && <AccrualPanel />}
+
+          {tabShown('debtors') && <DebtorsPanel />}
+
+          {tabShown('excel') && <ExcelReportsPanel />}
 
           {!isOperator && activeTab === 'audit' && <AuditLogPanel />}
 

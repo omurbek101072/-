@@ -100,10 +100,12 @@ const currentPeriod = () => {
 };
 
 export const AccrualPanel: React.FC = () => {
-  const { runMonthlyAccrual, listAccruals, subscribers, tariffs } = useApp();
+  const { runMonthlyAccrual, listAccruals, subscribers, tariffs, hasService } = useApp();
+  const canWaste = hasService('waste');
+  const canPasture = hasService('pasture');
   const [period, setPeriod] = useState(currentPeriod());
-  const [waste, setWaste] = useState(true);
-  const [pasture, setPasture] = useState(false);
+  const [waste, setWaste] = useState(canWaste);
+  const [pasture, setPasture] = useState(!canWaste && canPasture);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -163,22 +165,29 @@ export const AccrualPanel: React.FC = () => {
               className="px-3 py-2 border border-stone-300 rounded-lg text-sm"
             />
           </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={waste} disabled={done('waste')} onChange={e => setWaste(e.target.checked)} />
-            Таштанды {done('waste') && <span className="text-xs text-emerald-700">(эсептелген)</span>}
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={pasture} disabled={done('pasture')} onChange={e => setPasture(e.target.checked)} />
-            Жайыт {done('pasture') && <span className="text-xs text-emerald-700">(эсептелген)</span>}
-          </label>
+          {canWaste && (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={waste} disabled={done('waste')} onChange={e => setWaste(e.target.checked)} />
+              Таштанды {done('waste') && <span className="text-xs text-emerald-700">(эсептелген)</span>}
+            </label>
+          )}
+          {canPasture && (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={pasture} disabled={done('pasture')} onChange={e => setPasture(e.target.checked)} />
+              Жайыт {done('pasture') && <span className="text-xs text-emerald-700">(эсептелген)</span>}
+            </label>
+          )}
         </div>
 
         <div className="grid sm:grid-cols-2 gap-3 text-xs">
+          {canWaste && (
           <div className="rounded-xl bg-stone-50 p-3">
             <div className="font-bold text-stone-800">Таштанды</div>
             <div>{wasteCount} абонент · болжол менен {money(wasteTotal)}</div>
             <div className="text-stone-500">Тариф: {tariffs.wastePerPerson} сом / адам</div>
           </div>
+          )}
+          {canPasture && (
           <div className="rounded-xl bg-stone-50 p-3">
             <div className="font-bold text-stone-800">Жайыт</div>
             <div>{pastureCount} абонент · болжол менен {money(pastureTotal)}</div>
@@ -186,6 +195,7 @@ export const AccrualPanel: React.FC = () => {
               Уй {tariffs.pastureCattleMonth}, жылкы {tariffs.pastureHorseMonth}, кой/эчки {tariffs.pastureSheepMonth}, топоз {tariffs.pastureYakMonth} сом / ай
             </div>
           </div>
+          )}
         </div>
 
         {!confirming ? (

@@ -1,14 +1,40 @@
 import React, { useEffect, useState } from 'react';
-import { useApp, AdminInfo, StaffRole } from '../context/AppContext';
+import { useApp, AdminInfo, StaffRole, ServiceKey, ALL_SERVICES, SERVICE_NAMES } from '../context/AppContext';
 import { Users, Plus, Trash2, RefreshCw, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+
+// Оператордун кызматтарын тандоо (баары белгиленсе — бардык кызматтар)
+const ServicePicker: React.FC<{
+  value: ServiceKey[];
+  onChange: (v: ServiceKey[]) => void;
+  disabled?: boolean;
+  labelPrefix: string;
+}> = ({ value, onChange, disabled, labelPrefix }) => (
+  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+    {ALL_SERVICES.map(k => (
+      <label key={k} className="flex items-center gap-1 text-[11px] text-stone-700 cursor-pointer">
+        <input
+          type="checkbox"
+          aria-label={`${labelPrefix} ${SERVICE_NAMES[k]}`}
+          checked={value.includes(k)}
+          disabled={disabled || (value.length === 1 && value.includes(k))}
+          onChange={e => onChange(e.target.checked ? ALL_SERVICES.filter(x => x === k || value.includes(x)) : value.filter(x => x !== k))}
+        />
+        {SERVICE_NAMES[k]}
+      </label>
+    ))}
+  </div>
+);
+
+const servicesOf = (a: AdminInfo): ServiceKey[] => (a.services && a.services.length ? a.services : ALL_SERVICES);
 
 // Админдерди сайттын ичинен кошуу жана алып салуу
 export const AdminManager: React.FC = () => {
-  const { listAdmins, addAdmin, removeAdmin, setAdminRole, adminEmail } = useApp();
+  const { listAdmins, addAdmin, removeAdmin, setAdminRole, setAdminServices, adminEmail } = useApp();
   const [admins, setAdmins] = useState<AdminInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<StaffRole>('operator');
+  const [newServices, setNewServices] = useState<ServiceKey[]>(ALL_SERVICES);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
@@ -33,7 +59,7 @@ export const AdminManager: React.FC = () => {
     const email = newEmail.trim();
     if (!email || busy) return;
     setBusy(true);
-    const r = await addAdmin(email, newRole);
+    const r = await addAdmin(email, newRole, newRole === 'operator' ? newServices : null);
     setBusy(false);
     if (r.ok) {
       setMessage({
@@ -41,6 +67,7 @@ export const AdminManager: React.FC = () => {
         text: `${email} ${newRole === 'operator' ? 'оператор' : 'админ'} катары кошулду. Ал сайттагы «Кызматтык кирүү → Катталуу» аркылуу ушул email менен катталып, кире алат.`
       });
       setNewEmail('');
+      setNewServices(ALL_SERVICES);
       load();
     } else {
       setMessage({ ok: false, text: r.error || 'Кошуу мүмкүн болгон жок.' });
@@ -64,6 +91,19 @@ export const AdminManager: React.FC = () => {
     load();
   };
 
+  const handleServices = async (email: string, services: ServiceKey[]) => {
+    setAdmins(prev => prev.map(x => (x.email === email ? { ...x, services } : x)));
+    setBusy(true);
+    const r = await setAdminServices(email, services);
+    setBusy(false);
+    setMessage(
+      r.ok
+        ? { ok: true, text: `${email}: кызматтары — ${services.length === ALL_SERVICES.length ? 'баары' : services.map(k => SERVICE_NAMES[k]).join(', ')}.` }
+        : { ok: false, text: r.error || 'Өзгөртүү мүмкүн болгон жок.' }
+    );
+    load();
+  };
+
   const isMe = (email: string) => email.toLowerCase() === (adminEmail || '').toLowerCase();
 
   return (
@@ -78,6 +118,7 @@ export const AdminManager: React.FC = () => {
             Бул тизмедеги email менен катталган адамдар башкаруу панелине кире алат.
             <b> Админ</b> — бардыгын өзгөртөт. <b>Оператор</b> — абоненттерди, водомер көрсөткүчүн, кассадагы төлөмдү
             киргизет жана айлык эсептөө жүргүзөт; сайттын тексттерине, тарифтерге жана админдерге тийе албайт.
+            Операторго кызмат белгилесеңиз (мисалы, «Таза суу» гана), ал ошол кызматтын эсептерин жана төлөмдөрүн гана жүргүзөт.
           </p>
         </div>
         <button
@@ -107,6 +148,22 @@ export const AdminManager: React.FC = () => {
                   {a.role === 'operator' ? 'Оператор' : 'Админ'}
                 </span>
               </div>
+              {a.role === 'operator' && (
+                <div className="mt-1">
+                  {isMe(a.email) ? (
+                    <span className="text-[10px] text-stone-500">
+                      Кызматтары: {servicesOf(a).map(k => SERVICE_NAMES[k]).join(', ')}
+                    </span>
+                  ) : (
+                    <ServicePicker
+                      value={servicesOf(a)}
+                      disabled={busy}
+                      labelPrefix={a.email}
+                      onChange={v => handleServices(a.email, v)}
+                    />
+                  )}
+                </div>
+              )}
               <div className="text-[10px] text-stone-500 mt-0.5 flex items-center gap-1">
                 {a.confirmed ? (
                   <>
@@ -207,6 +264,12 @@ export const AdminManager: React.FC = () => {
             <span>Кошуу</span>
           </button>
         </div>
+        {newRole === 'operator' && (
+          <div className="space-y-1">
+            <div className="text-[11px] text-stone-600 font-semibold">Кайсы кызматтар менен иштейт:</div>
+            <ServicePicker value={newServices} onChange={setNewServices} labelPrefix="Жаңы кызматкер" />
+          </div>
+        )}
         <p className="text-[11px] text-stone-500">
           Кошулган адам сайттын ылдыйындагы «Кызматтык кирүү» → «Катталуу» аркылуу ушул email менен катталат, анан кирет.
         </p>

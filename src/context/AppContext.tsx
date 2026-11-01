@@ -122,10 +122,28 @@ export interface StaffMeterResult {
 }
 
 export type StaffRole = 'admin' | 'operator';
+export type ServiceKey = 'water' | 'waste' | 'pasture' | 'machinery';
+export const ALL_SERVICES: ServiceKey[] = ['water', 'waste', 'pasture', 'machinery'];
+export const SERVICE_NAMES: Record<ServiceKey, string> = {
+  water: 'Таза суу',
+  waste: 'Таштанды',
+  pasture: 'Жайыт',
+  machinery: 'Техника'
+};
+
+export interface DebtNotice {
+  id: number;
+  at: string;
+  actor: string;
+  account_id: string;
+  service: 'water' | 'waste' | 'pasture';
+  note: string;
+}
 
 export interface AdminInfo {
   email: string;
   role?: StaffRole;
+  services?: ServiceKey[] | null;
   addedAt: string;
   registered: boolean;
   confirmed: boolean;
@@ -156,6 +174,9 @@ interface AppContextType {
   /** 'admin' — толук укук, 'operator' — абоненттер, касса, көрсөткүч гана */
   staffRole: StaffRole | null;
   isOperator: boolean;
+  /** Кызматкердин кызматтары (админде — баары) */
+  staffServices: ServiceKey[];
+  hasService: (s: ServiceKey) => boolean;
   adminEmail: string | null;
   isEditModeActive: boolean;
   isLoading: boolean;
@@ -206,7 +227,12 @@ interface AppContextType {
   authMessage: string | null;
   clearAuthMessage: () => void;
   listAdmins: () => Promise<AdminInfo[]>;
-  addAdmin: (email: string, role?: StaffRole) => Promise<Result>;
+  addAdmin: (email: string, role?: StaffRole, services?: ServiceKey[] | null) => Promise<Result>;
+  setAdminServices: (email: string, services: ServiceKey[] | null) => Promise<Result>;
+  markDebtNotice: (accountId: string, service: 'water' | 'waste' | 'pasture', note: string) => Promise<Result>;
+  listDebtNotices: () => Promise<DebtNotice[]>;
+  /** Мөөнөт ичиндеги төлөмдөр (fromIso ≤ убакыт < toIso) */
+  listTransactionsBetween: (fromIso: string, toIso: string) => Promise<(PaymentTransaction & { createdAt: string })[]>;
   setAdminRole: (email: string, role: StaffRole) => Promise<Result>;
   staffMeterReading: (accountId: string, reading: number) => Promise<StaffMeterResult>;
   runMonthlyAccrual: (period: string, waste: boolean, pasture: boolean) => Promise<Result>;
@@ -243,6 +269,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
   const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
+  const [staffServices, setStaffServices] = useState<ServiceKey[]>(ALL_SERVICES);
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
   const [isEditModeActive, setIsEditModeActiveRaw] = useState(false);
   // Оператор сайттын тексттерин өзгөртө албайт
@@ -325,14 +352,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const s = getSession();
     if (!s) return false;
     let role: StaffRole | null = null;
+    let services: ServiceKey[] = ALL_SERVICES;
     try {
-      role = (await db.rpc<StaffRole | null>('my_role')) || null;
+      const me = await db.rpc<{ role: StaffRole; services: ServiceKey[] } | null>('my_staff');
+      role = me?.role || null;
+      if (me?.services?.length) services = me.services;
     } catch {
-      // 008_roles.sql иштетиле элек болсо — мурункудай текшеребиз
-      role = (await db.rpc<boolean>('is_admin')) ? 'admin' : null;
+      try {
+        // 009_services.sql иштетиле элек болсо
+        role = (await db.rpc<StaffRole | null>('my_role')) || null;
+      } catch {
+        // 008_roles.sql иштетиле элек болсо — мурункудай текшеребиз
+        role = (await db.rpc<boolean>('is_admin')) ? 'admin' : null;
+      }
     }
     if (role) {
       setStaffRole(role);
+      setStaffServices(role === 'admin' ? ALL_SERVICES : services);
       setIsAdminLoggedIn(true);
       setAdminEmail(s.email);
       await loadAdmin();
@@ -507,9 +543,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateSubscriber = (updated: SubscriberAccount) => {
+    const before = subscribers.find(s => s.id === updated.id);
     setSubscribers(prev => prev.map(s => (s.id === updated.id ? updated : s)));
     const { id: _id, ...values } = toRow(updated);
-    persist(db.update('subscribers', `id=eq.${enc(updated.id)}`, values));
+    // Өзгөргөн талааларды гана жиберебиз: ошондо башка кызматкердин ошол убакта
+    // киргизген төлөмү же көрсөткүчү эски маани менен үстүнө жазылып калбайт.
+    let changed: Partial<typeof values> = values;
+    if (before) {
+      const old = toRow(before) as unknown as Record<string, unknown>;
+      changed = Object.fromEntries(
+        Object.entries(values).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(old[k]))
+      ) as Partial<typeof values>;
+    }
+    if (!Object.keys(changed).length) return;
+    persist(db.update('subscribers', `id=eq.${enc(updated.id)}`, changed));
   };
 
   const addSubscriber = (newSub: SubscriberAccount) => {
@@ -722,12 +769,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return /staff_|admin_set_role|audit_log|accruals|schema cache|Could not find|does not exist/i.test(m) ? ROLES_MISSING : m;
   };
 
-  const addAdmin = async (email: string, role: StaffRole = 'admin'): Promise<Result> => {
+  const SERVICES_MISSING = "Кызматтар даяр эмес: supabase/009_services.sql файлын Supabase'те иштетиңиз.";
+  const servicesErr = (e: unknown) => {
+    const m = errText(e);
+    return /admin_set_services|staff_debt_notice|debt_notices|p_services|schema cache|Could not find|does not exist/i.test(m) ? SERVICES_MISSING : m;
+  };
+
+  const addAdmin = async (email: string, role: StaffRole = 'admin', services: ServiceKey[] | null = null): Promise<Result> => {
     try {
-      await db.rpc('admin_add', role === 'admin' ? { p_email: email } : { p_email: email, p_role: role });
+      const args: Record<string, unknown> = { p_email: email };
+      if (role !== 'admin') args.p_role = role;
+      if (role === 'operator' && services && services.length && services.length < ALL_SERVICES.length) args.p_services = services;
+      await db.rpc('admin_add', args);
       return { ok: true };
     } catch (e) {
-      return { ok: false, error: role === 'admin' ? errText(e) : rolesErr(e) };
+      const scoped = !!services && services.length < ALL_SERVICES.length;
+      return { ok: false, error: role === 'admin' ? errText(e) : scoped ? servicesErr(e) : rolesErr(e) };
+    }
+  };
+
+  const setAdminServices = async (email: string, services: ServiceKey[] | null): Promise<Result> => {
+    try {
+      await db.rpc('admin_set_services', {
+        p_email: email,
+        p_services: services && services.length && services.length < ALL_SERVICES.length ? services : null
+      });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: servicesErr(e) };
+    }
+  };
+
+  const markDebtNotice = async (accountId: string, service: 'water' | 'waste' | 'pasture', note: string): Promise<Result> => {
+    try {
+      await db.rpc('staff_debt_notice', { p_account: accountId, p_service: service, p_note: note });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: servicesErr(e) };
+    }
+  };
+
+  const listTransactionsBetween = async (fromIso: string, toIso: string) => {
+    const rows = await db.select<{ data: PaymentTransaction; created_at: string }>(
+      'transactions',
+      `select=data,created_at&created_at=gte.${enc(fromIso)}&created_at=lt.${enc(toIso)}&order=created_at.asc&limit=20000`
+    );
+    return rows.map(r => ({ ...r.data, amount: Number(r.data.amount), createdAt: r.created_at }));
+  };
+
+  const listDebtNotices = async (): Promise<DebtNotice[]> => {
+    try {
+      return await db.select<DebtNotice>('debt_notices', 'select=*&order=at.desc&limit=2000');
+    } catch {
+      return [];
     }
   };
 
@@ -796,6 +890,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     auth.signOut();
     setIsAdminLoggedIn(false);
     setStaffRole(null);
+    setStaffServices(ALL_SERVICES);
     setAdminEmail(null);
     setIsEditModeActiveRaw(false);
     clearAdminData();
@@ -822,6 +917,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isAdminLoggedIn,
         staffRole,
         isOperator: staffRole === 'operator',
+        staffServices,
+        hasService: (x: ServiceKey) => staffServices.includes(x),
         adminEmail,
         isEditModeActive,
         isLoading,
@@ -868,6 +965,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearAuthMessage: () => setAuthMessage(null),
         listAdmins,
         addAdmin,
+        setAdminServices,
+        markDebtNotice,
+        listDebtNotices,
+        listTransactionsBetween,
         setAdminRole,
         staffMeterReading,
         runMonthlyAccrual,
