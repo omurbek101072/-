@@ -17,6 +17,64 @@ import { Droplets, Trash2, Mountain, Search, X, FileText, ClipboardList, Refresh
 
 type Service = 'water' | 'waste' | 'pasture';
 
+const MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+const periodName = (p: string) => {
+  const [y, m] = p.split('-').map(Number);
+  return m >= 1 && m <= 12 ? `${y}-ж. ${MONTHS[m - 1]}` : p;
+};
+const KIND_NAMES: Record<Service, string> = { water: 'Таза суу', waste: 'Таштанды', pasture: 'Жайыт' };
+
+// Ай сайын эсептелген акылар: таштанды, жайыт жана водомер боюнча суу
+const ChargesHistory: React.FC<{ hist: AccountHistory | null }> = ({ hist }) => {
+  if (!hist) return null;
+  const rows = [
+    ...(hist.charges || []).map(c => ({
+      date: c.date,
+      label: periodName(c.period),
+      kind: c.kind as Service,
+      detail: c.detail,
+      amount: c.amount
+    })),
+    ...hist.readings.map(r => ({
+      date: r.date,
+      label: new Date(r.date).toLocaleDateString('ru-RU'),
+      kind: 'water' as Service,
+      detail: `${Math.round((r.new - r.prev) * 100) / 100} м³ (${r.prev} → ${r.new})`,
+      amount: r.amount
+    }))
+  ].sort((a, b) => (a.date < b.date ? 1 : -1));
+  return (
+    <div className="p-5 rounded-2xl bg-white border border-stone-200 space-y-3" data-testid="charges-history">
+      <h3 className="font-bold text-stone-900 flex items-center gap-2">
+        <ClipboardList className="w-4 h-4 text-amber-700" /> <T>Эсептелген акылар</T>
+      </h3>
+      <p className="text-xs text-stone-500">
+        <T>Карызыңыз кайдан келгени: ай сайын таштанды жана жайыт үчүн, ошондой эле водомердин көрсөткүчү боюнча суу үчүн эсептелген суммалар.</T>
+      </p>
+      {rows.length === 0 ? (
+        <p className="text-sm text-stone-500">Азырынча эсептелген акы жок.</p>
+      ) : (
+        <ul className="divide-y divide-stone-100">
+          {rows.map((r, i) => (
+            <li key={i} className="py-2">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-sm">
+                  <span className="font-semibold text-stone-900">{KIND_NAMES[r.kind]}</span>
+                  <span className="text-stone-500"> · {r.label}</span>
+                </span>
+                <span className="font-mono text-sm font-bold text-stone-900 whitespace-nowrap">
+                  {Math.round(r.amount).toLocaleString('ru-RU')} сом
+                </span>
+              </div>
+              {r.detail && <div className="text-xs text-stone-500 mt-0.5">{r.detail}</div>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 interface CabinetProps {
   onPay: (serviceType: Service, amount: number, details: string, accountId: string) => void;
   onOpenCitizenRequest: () => void;
@@ -271,6 +329,9 @@ const AccountView: React.FC<{ id: string; onPay: CabinetProps['onPay'] }> = ({ i
           </div>
         )}
       </div>
+
+      {/* Эсептелген акылар */}
+      <ChargesHistory hist={hist} />
 
       {/* Төлөм тарыхы */}
       <div className="p-5 rounded-2xl bg-white border border-stone-200 space-y-3">

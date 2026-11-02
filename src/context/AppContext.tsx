@@ -94,6 +94,8 @@ export interface OrderStatus {
 export interface AccountHistory {
   payments: Pick<PaymentTransaction, 'id' | 'receiptNumber' | 'timestamp' | 'serviceType' | 'serviceName' | 'amount' | 'paymentMethod' | 'status' | 'accountId'>[];
   readings: { date: string; prev: number; new: number; amount: number }[];
+  /** Айлык эсептөөлөр (таштанды, жайыт) */
+  charges: { date: string; period: string; kind: 'waste' | 'pasture'; amount: number; detail: string }[];
 }
 
 export interface AuditEntry {
@@ -461,7 +463,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!r) return null;
       return {
         payments: (r.payments || []).map(p => ({ ...p, amount: Number(p.amount) })),
-        readings: (r.readings || []).map(x => ({ date: x.date, prev: Number(x.prev), new: Number(x.new), amount: Number(x.amount) }))
+        readings: (r.readings || []).map(x => ({ date: x.date, prev: Number(x.prev), new: Number(x.new), amount: Number(x.amount) })),
+        charges: (r.charges || []).map(x => ({ ...x, amount: Number(x.amount), detail: x.detail || '' }))
       };
     } catch {
       return null; // 007_cabinet.sql иштетиле элек болсо
