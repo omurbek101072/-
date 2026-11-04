@@ -2,6 +2,7 @@ import React from 'react';
 import { T } from './AdminInline';
 import { Phone, MapPin, Clock, Lock, ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { BrandMark } from './BrandMark';
 import { EditableText } from './EditableText';
 import { PhoneLink } from './PhoneLink';
 
@@ -25,9 +26,7 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Col 1: Identity */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-base">
-                {siteSettings.enterpriseName.charAt(1) || 'Т'}
-              </div>
+              <BrandMark className="w-8 h-8" />
               <span className="font-extrabold text-base text-white tracking-tight">
                 <EditableText settingKey="enterpriseName" label="Ишкананын аталышы" />
               </span>

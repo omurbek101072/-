@@ -273,7 +273,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     { id: 'h4', value: '10,400 га', label: 'Көзөмөлдөгү жайыттар' }
   ],
   images: {
-    hero: 'images/tazalyk_hero_village_1791715414641.jpg',
+    hero: 'images/hero-taza-suu.svg',
     pasture: 'images/tazalyk_pasture_landscape_1791715452252.jpg'
   },
   texts: {},

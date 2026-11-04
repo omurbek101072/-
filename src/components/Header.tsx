@@ -2,6 +2,7 @@ import { T } from './AdminInline';
 import React from 'react';
 import { Phone, CreditCard, AlertTriangle, Menu, X, ShieldCheck, Settings, UserRound } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { BrandMark } from './BrandMark';
 import { EditableText } from './EditableText';
 import { PhoneLink } from './PhoneLink';
 
@@ -94,9 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="text-left group cursor-pointer"
         >
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-bold text-lg shadow-sm">
-              {siteSettings.enterpriseName.charAt(1) || 'Т'}
-            </div>
+            <BrandMark className="w-9 h-9" />
             <div>
               <span className="text-lg font-extrabold tracking-tight text-stone-900 block leading-tight">
                 {siteSettings.enterpriseName}

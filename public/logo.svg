@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#059669"/>
+      <stop offset="1" stop-color="#0369a1"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7dd3fc"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+    <clipPath id="drop"><path d="M32 9C32 9 17 26.5 17 37.5a15 15 0 0 0 30 0C47 26.5 32 9 32 9Z"/></clipPath>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#bg)"/>
+  <path d="M32 9C32 9 17 26.5 17 37.5a15 15 0 0 0 30 0C47 26.5 32 9 32 9Z" fill="#ffffff"/>
+  <g clip-path="url(#drop)">
+    <path d="M14 39c4.5-3.2 9-3.2 13.5 0s9 3.2 13.5 0 6-3.2 10 0V60H14Z" fill="url(#water)"/>
+    <path d="M14 39c4.5-3.2 9-3.2 13.5 0s9 3.2 13.5 0 6-3.2 10 0" fill="none" stroke="#ffffff" stroke-width="1.6" opacity=".9"/>
+  </g>
+  <path d="M24.5 31.5c0-4 2.6-8.4 5-11.4" fill="none" stroke="#bae6fd" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M49 10.5l1.5 3.9 3.9 1.5-3.9 1.5L49 21.3l-1.5-3.9-3.9-1.5 3.9-1.5Z" fill="#fef9c3"/>
+</svg>

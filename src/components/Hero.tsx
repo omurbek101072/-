@@ -23,9 +23,9 @@ export const Hero: React.FC<HeroProps> = ({
       <div className="absolute inset-0 z-0">
         <img
           src={content.images.hero}
-          alt="Кыргыз айылынын көрүнүшү жана таза көчөлөрү"
+          alt="Тоодон аккан таза суу жана айыл"
           referrerPolicy="no-referrer"
-          className="w-full h-full object-cover object-center"
+          className="w-full h-full object-cover object-[72%_60%] sm:object-center"
         />
         {/* Тексттин астын гана күңүрттөйбүз — сүрөттүн оң жагы тунук көрүнөт */}
         <div className="absolute inset-0 bg-gradient-to-r from-stone-950/85 via-stone-950/55 to-stone-950/5" />

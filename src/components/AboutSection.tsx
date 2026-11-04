@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
+import { BrandMark } from './BrandMark';
 import { T, SectionEditButton, useInlineEdit } from './AdminInline';
 import { ServiceMap, Stars, ContentTab } from './ContentManager';
 import { intlPhone } from './FloatingContact';
@@ -250,7 +251,7 @@ export const AboutSection: React.FC = () => {
               <img src={about.image} alt={about.title} className="w-full h-72 lg:h-96 object-cover rounded-3xl border border-stone-200 shadow-sm" />
             ) : (
               <div className="hidden lg:flex h-96 rounded-3xl bg-gradient-to-br from-emerald-800 to-emerald-950 text-emerald-100 flex-col items-center justify-center gap-3 p-8 text-center">
-                <span className="text-6xl font-extrabold">Т</span>
+                <BrandMark className="w-24 h-24" />
                 <span className="text-sm font-semibold">{siteSettings.enterpriseName} {siteSettings.enterpriseSubName}</span>
               </div>
             )}

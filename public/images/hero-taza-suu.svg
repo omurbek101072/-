@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5fa8e6"/>
+      <stop offset="0.55" stop-color="#a9d4f2"/>
+      <stop offset="1" stop-color="#e8f4fb"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="1500" cy="250" r="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffbe6" stop-opacity="1"/>
+      <stop offset="0.18" stop-color="#fff3c4" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#fff3c4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="farMtn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fa9c4"/>
+      <stop offset="1" stop-color="#b8cde0"/>
+    </linearGradient>
+    <linearGradient id="midMtn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5b7f8f"/>
+      <stop offset="1" stop-color="#7fa3a2"/>
+    </linearGradient>
+    <linearGradient id="hill1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7fb069"/>
+      <stop offset="1" stop-color="#5e9a4f"/>
+    </linearGradient>
+    <linearGradient id="hill2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5f9e4a"/>
+      <stop offset="1" stop-color="#3f7f38"/>
+    </linearGradient>
+    <linearGradient id="hill3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4b8b3c"/>
+      <stop offset="1" stop-color="#2f6a2c"/>
+    </linearGradient>
+    <linearGradient id="river" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bfe7fb"/>
+      <stop offset="0.5" stop-color="#5cc2ef"/>
+      <stop offset="1" stop-color="#1e9bd8"/>
+    </linearGradient>
+    <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity=".45"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Асман жана күн -->
+  <rect width="1920" height="1080" fill="url(#sky)"/>
+  <circle cx="1500" cy="250" r="420" fill="url(#sun)"/>
+  <circle cx="1500" cy="250" r="62" fill="#fffdf2"/>
+
+  <!-- Булуттар -->
+  <g fill="#ffffff" opacity=".85">
+    <path d="M1060 210c22-34 74-38 98-8 30-22 80-8 86 30 34 2 50 40 22 58H1046c-34-8-30-66 14-80Z"/>
+    <path d="M1690 360c16-24 54-27 71-6 22-16 58-6 62 22 25 1 36 29 16 42h-160c-25-6-22-48 11-58Z" opacity=".8"/>
+    <path d="M520 150c18-27 60-30 79-6 24-18 64-6 69 24 27 2 40 32 18 46H509c-27-6-24-53 11-64Z" opacity=".7"/>
+  </g>
+
+  <!-- Алыскы кар баскан тоолор -->
+  <path d="M0 560 L170 420 L260 470 L420 300 L560 430 L700 330 L860 470 L1010 260 L1170 440 L1300 340 L1450 470 L1600 300 L1760 450 L1920 360 V700 H0Z" fill="url(#farMtn)"/>
+  <g fill="#f4f8fc">
+    <path d="M420 300 L470 352 L448 348 L432 372 L410 350 L388 362 Z"/>
+    <path d="M700 330 L742 372 L720 368 L706 390 L688 368 L664 376 Z"/>
+    <path d="M1010 260 L1066 322 L1040 316 L1022 344 L1000 318 L972 334 Z"/>
+    <path d="M1300 340 L1340 380 L1318 376 L1304 396 L1286 376 L1262 386 Z"/>
+    <path d="M1600 300 L1652 356 L1628 350 L1612 376 L1592 352 L1566 366 Z"/>
+    <path d="M1920 360 L1880 392 L1900 390 L1912 410 L1920 404 Z"/>
+  </g>
+  <rect y="420" width="1920" height="300" fill="url(#haze)"/>
+
+  <!-- Орто тоолор -->
+  <path d="M0 640 C 140 560, 240 520, 360 560 C 480 600, 560 500, 700 520 C 840 540, 900 600, 1040 570 C 1180 540, 1240 470, 1380 500 C 1520 530, 1600 600, 1740 560 C 1820 538, 1880 520, 1920 530 V760 H0Z" fill="url(#midMtn)"/>
+
+  <!-- Тоодон аккан суу -->
+  <path d="M1352 520 C 1346 560, 1362 590, 1342 625 C 1336 640, 1334 650, 1336 660 L1356 660 C 1358 640, 1366 625, 1372 600 C 1380 565, 1366 545, 1362 520 Z" fill="#cdeefc" opacity=".95"/>
+  <!-- Жашыл адырлар -->
+  <path d="M0 720 C 220 660, 420 650, 640 690 C 860 730, 1040 660, 1280 650 C 1520 640, 1720 690, 1920 670 V1080 H0Z" fill="url(#hill1)"/>
+
+  <!-- Дарыя: тоодон айылга агат -->
+  <path d="M1330 652 C 1300 700, 1360 735, 1300 780 C 1230 832, 1060 850, 1050 930 C 1042 990, 1120 1040, 1180 1080 L1420 1080 C 1330 1030, 1260 990, 1290 935 C 1330 872, 1480 840, 1470 770 C 1462 715, 1380 700, 1362 652 Z" fill="url(#river)"/>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" opacity=".75">
+    <path d="M1322 700 C 1335 715, 1345 735, 1330 752" stroke-width="3"/>
+    <path d="M1240 812 C 1200 828, 1140 846, 1112 880" stroke-width="4"/>
+    <path d="M1330 830 C 1300 846, 1290 860, 1300 880" stroke-width="3"/>
+    <path d="M1130 960 C 1150 990, 1190 1020, 1230 1046" stroke-width="5"/>
+    <path d="M1300 980 C 1310 1000, 1330 1020, 1350 1036" stroke-width="4"/>
+  </g>
+
+  <!-- Айыл: үйлөр жана теректер -->
+  <g>
+    <!-- теректер -->
+    <g fill="#2f6b34">
+      <ellipse cx="1520" cy="690" rx="16" ry="70"/>
+      <ellipse cx="1556" cy="700" rx="14" ry="60"/>
+      <ellipse cx="1590" cy="694" rx="15" ry="66"/>
+      <ellipse cx="1740" cy="700" rx="15" ry="62"/>
+      <ellipse cx="1772" cy="708" rx="13" ry="54"/>
+      <ellipse cx="1110" cy="712" rx="14" ry="56"/>
+      <ellipse cx="1140" cy="718" rx="12" ry="48"/>
+    </g>
+    <g fill="#3d8a40">
+      <ellipse cx="1512" cy="684" rx="8" ry="56"/>
+      <ellipse cx="1584" cy="688" rx="8" ry="52"/>
+      <ellipse cx="1734" cy="694" rx="8" ry="48"/>
+      <ellipse cx="1104" cy="706" rx="7" ry="42"/>
+    </g>
+    <!-- үйлөр -->
+    <g>
+      <rect x="1610" y="720" width="96" height="58" fill="#f8f5ee"/>
+      <path d="M1600 724 L1658 684 L1716 724 Z" fill="#0f766e"/>
+      <rect x="1626" y="740" width="18" height="18" fill="#7dd3fc"/>
+      <rect x="1670" y="740" width="18" height="18" fill="#7dd3fc"/>
+      <rect x="1600" y="776" width="116" height="6" fill="#d6cfc0"/>
+
+      <rect x="1450" y="742" width="78" height="46" fill="#fbf8f1"/>
+      <path d="M1442 746 L1489 712 L1536 746 Z" fill="#b45309"/>
+      <rect x="1464" y="758" width="15" height="15" fill="#7dd3fc"/>
+      <rect x="1498" y="758" width="15" height="15" fill="#7dd3fc"/>
+
+      <rect x="1790" y="736" width="84" height="50" fill="#f8f5ee"/>
+      <path d="M1782 740 L1832 704 L1882 740 Z" fill="#0f766e"/>
+      <rect x="1806" y="752" width="15" height="15" fill="#7dd3fc"/>
+      <rect x="1844" y="752" width="15" height="15" fill="#7dd3fc"/>
+
+      <rect x="1160" y="732" width="70" height="42" fill="#fbf8f1"/>
+      <path d="M1152 736 L1195 704 L1238 736 Z" fill="#b45309"/>
+      <rect x="1174" y="746" width="13" height="13" fill="#7dd3fc"/>
+      <rect x="1204" y="746" width="13" height="13" fill="#7dd3fc"/>
+    </g>
+  </g>
+
+  <!-- Алдыңкы адырлар -->
+  <path d="M0 860 C 260 800, 520 820, 760 860 C 900 884, 980 900, 1060 902 C 1050 960, 1100 1030, 1160 1080 H0Z" fill="url(#hill2)"/>
+  <path d="M1440 1080 C 1380 1030, 1330 980, 1360 930 C 1500 900, 1720 880, 1920 900 V1080Z" fill="url(#hill2)"/>
+  <path d="M0 960 C 300 920, 600 950, 900 1000 C 980 1014, 1060 1040, 1120 1080 H0Z" fill="url(#hill3)"/>
+  <path d="M1500 1080 C 1560 1020, 1720 990, 1920 1000 V1080Z" fill="url(#hill3)"/>
+
+  <g fill="none" stroke="#9ccc7a" stroke-width="3" stroke-linecap="round" opacity=".35">
+    <path d="M120 760 C 260 730, 400 728, 540 750"/>
+    <path d="M700 760 C 820 745, 920 730, 1020 728"/>
+    <path d="M1500 900 C 1620 890, 1760 885, 1880 892"/>
+  </g>
+  <!-- Гүлдөр жана чөптөр -->
+  <g fill="#fde68a" opacity=".9">
+    <circle cx="1560" cy="1040" r="5"/><circle cx="1610" cy="1020" r="4"/><circle cx="1680" cy="1046" r="5"/>
+    <circle cx="1760" cy="1016" r="4"/><circle cx="1840" cy="1040" r="5"/><circle cx="1880" cy="1010" r="4"/>
+  </g>
+  <g fill="#ffffff" opacity=".9">
+    <circle cx="1590" cy="1056" r="4"/><circle cx="1720" cy="1030" r="4"/><circle cx="1800" cy="1060" r="4"/>
+  </g>
+</svg>
